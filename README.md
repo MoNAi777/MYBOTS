@@ -8,6 +8,7 @@ A Progressive Web App (PWA) for organizing and searching through your WhatsApp a
 - **Automatic Categorization**: AI-powered categorization of messages based on content
 - **Smart Search**: Search through your messages with AI-enhanced search capabilities
 - **Offline Support**: Works offline with local storage using IndexedDB
+- **Server-Side Storage**: Persistent storage with Supabase PostgreSQL
 - **Message Types**: Automatically detects message types (text, link, video, image, file, app)
 - **Statistics**: View statistics about your saved messages
 - **Customization**: Edit categories and tags for better organization
@@ -19,6 +20,7 @@ A Progressive Web App (PWA) for organizing and searching through your WhatsApp a
 
 - Node.js 18.0 or higher
 - npm or yarn
+- Supabase account (free tier works fine)
 
 ### Installation
 
@@ -35,14 +37,40 @@ A Progressive Web App (PWA) for organizing and searching through your WhatsApp a
    yarn install
    ```
 
-3. Run the development server:
+3. Set up environment variables:
+   Create a `.env.local` file with the following variables:
+   ```
+   # Database Configuration (Supabase)
+   NEXT_PUBLIC_SUPABASE_URL=your_supabase_url
+   NEXT_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
+   
+   # Telegram Bot
+   TELEGRAM_BOT_TOKEN=your_telegram_bot_token
+   TELEGRAM_BOT_USERNAME=your_bot_username
+   NEXT_PUBLIC_TELEGRAM_BOT_TOKEN=your_telegram_bot_token
+   NEXT_PUBLIC_TELEGRAM_BOT_USERNAME=your_bot_username
+   
+   # Twilio Credentials (for WhatsApp)
+   TWILIO_ACCOUNT_SID=your_twilio_account_sid
+   TWILIO_AUTH_TOKEN=your_twilio_auth_token
+   TWILIO_PHONE_NUMBER=your_twilio_phone_number
+   TWILIO_WHATSAPP_NUMBER=your_twilio_whatsapp_number
+   TWILIO_WHATSAPP_SANDBOX_CODE=your_sandbox_join_code
+   ```
+
+4. Set up the database:
+   - Create a Supabase account at https://supabase.com
+   - Create a new project
+   - Go to the SQL Editor and run the SQL in `create_tables.sql`
+
+5. Run the development server:
    ```
    npm run dev
    # or
    yarn dev
    ```
 
-4. Open [http://localhost:3000](http://localhost:3000) in your browser.
+6. Open [http://localhost:3000](http://localhost:3000) in your browser.
 
 ### Building for Production
 
@@ -51,6 +79,45 @@ npm run build
 # or
 yarn build
 ```
+
+## Database Setup with Supabase
+
+1. Create a free Supabase account at https://supabase.com
+2. Create a new project
+3. Go to the SQL Editor and run the following SQL to create the Message table:
+
+```sql
+-- Create Message table
+CREATE TABLE IF NOT EXISTS "Message" (
+  "id" SERIAL PRIMARY KEY,
+  "content" TEXT NOT NULL,
+  "source" TEXT NOT NULL, -- 'whatsapp' or 'telegram'
+  "type" TEXT NOT NULL, -- 'text', 'link', 'video', 'image', 'file', 'app', 'other'
+  "category" TEXT,
+  "tags" TEXT[] DEFAULT '{}',
+  "createdAt" TIMESTAMP WITH TIME ZONE DEFAULT NOW() NOT NULL,
+  "starred" BOOLEAN DEFAULT FALSE NOT NULL,
+  "metadata" JSONB
+);
+
+-- Create indexes for better performance
+CREATE INDEX IF NOT EXISTS "Message_source_idx" ON "Message" ("source");
+CREATE INDEX IF NOT EXISTS "Message_type_idx" ON "Message" ("type");
+CREATE INDEX IF NOT EXISTS "Message_category_idx" ON "Message" ("category");
+CREATE INDEX IF NOT EXISTS "Message_createdAt_idx" ON "Message" ("createdAt");
+CREATE INDEX IF NOT EXISTS "Message_starred_idx" ON "Message" ("starred");
+
+-- Enable Row Level Security (RLS)
+ALTER TABLE "Message" ENABLE ROW LEVEL SECURITY;
+
+-- Create a policy that allows all operations for now
+CREATE POLICY "Allow all operations on Message" ON "Message"
+  USING (true)
+  WITH CHECK (true);
+```
+
+4. Get your Supabase URL and anon key from the API settings
+5. Update your `.env.local` file with these values
 
 ## How to Use
 
@@ -83,8 +150,25 @@ yarn build
 
 - Built with Next.js and TypeScript
 - Uses IndexedDB for offline storage
+- Uses Supabase for server-side PostgreSQL database
+- Hybrid database approach: client-side IndexedDB + server-side Supabase
 - Implements PWA features for offline use and installation
 - Responsive design with Tailwind CSS
+
+## Database Architecture
+
+The application uses a hybrid database approach:
+
+1. **Client-side**: IndexedDB for offline storage and quick access
+2. **Server-side**: Supabase PostgreSQL for persistent storage
+
+The database schema includes:
+
+- **Messages**: Stores all messages with their content, source, type, and metadata
+- **Categories**: Auto-generated or user-defined categories
+- **Tags**: User-defined tags for better organization
+
+Data synchronization happens automatically when the application is online.
 
 ## License
 

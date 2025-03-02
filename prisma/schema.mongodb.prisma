@@ -1,0 +1,24 @@
+// MongoDB version of the Prisma schema
+// To use this, rename to schema.prisma and update the datasource
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mongodb"
+  url      = env("DATABASE_URL")
+}
+
+// Message model for MongoDB
+model Message {
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  content   String
+  source    String   // 'whatsapp' or 'telegram'
+  type      String   // 'text', 'link', 'video', 'image', 'file', 'app', 'other'
+  category  String?
+  tags      String[] // Array of tags
+  createdAt DateTime @default(now())
+  starred   Boolean  @default(false)
+  metadata  Json?    // For additional metadata
+} 

@@ -7,7 +7,7 @@ import MessageCard from './components/MessageCard';
 import IntegrationGuide from './components/IntegrationGuide';
 import MessageStats from './components/MessageStats';
 import WebhookMessages from './components/WebhookMessages';
-import dbService from './services/db';
+import hybridDbService from './services/hybridDb';
 import messageReceiverService from './services/messageReceiver';
 import { Message } from './services/db';
 
@@ -18,6 +18,7 @@ export default function Home() {
   const [whatsappLink, setWhatsappLink] = useState('');
   const [telegramLink, setTelegramLink] = useState('');
   const [isAddMessageOpen, setIsAddMessageOpen] = useState(false);
+  const [isSyncing, setIsSyncing] = useState(false);
   
   // Load messages on component mount
   useEffect(() => {
@@ -34,7 +35,7 @@ export default function Home() {
   const loadMessages = async () => {
     setIsLoading(true);
     try {
-      const allMessages = await dbService.getMessages();
+      const allMessages = await hybridDbService.getMessages();
       setMessages(allMessages.sort((a, b) => {
         return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
       }));
@@ -49,6 +50,21 @@ export default function Home() {
   const handleMessageAdded = () => {
     loadMessages();
     setIsAddMessageOpen(false);
+  };
+  
+  // Sync databases when online
+  const handleSync = async () => {
+    if (typeof window === 'undefined') return;
+    
+    setIsSyncing(true);
+    try {
+      await hybridDbService.syncDatabases();
+      await loadMessages();
+    } catch (error) {
+      console.error('Error syncing databases:', error);
+    } finally {
+      setIsSyncing(false);
+    }
   };
   
   // Handle search results
