@@ -1,0 +1,10 @@
+{
+  "name": "telegram-webhook-setup",
+  "version": "1.0.0",
+  "description": "Script to set up Telegram webhook",
+  "main": "setup-webhook.js",
+  "type": "module",
+  "dependencies": {
+    "node-fetch": "^3.3.2"
+  }
+} 

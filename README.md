@@ -1,36 +1,96 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Data Organizer
+
+A Progressive Web App (PWA) for organizing and searching through your WhatsApp and Telegram messages.
+
+## Features
+
+- **Save Messages**: Forward messages from WhatsApp and Telegram or add them manually
+- **Automatic Categorization**: AI-powered categorization of messages based on content
+- **Smart Search**: Search through your messages with AI-enhanced search capabilities
+- **Offline Support**: Works offline with local storage using IndexedDB
+- **Message Types**: Automatically detects message types (text, link, video, image, file, app)
+- **Statistics**: View statistics about your saved messages
+- **Customization**: Edit categories and tags for better organization
+- **Star Important Messages**: Mark important messages with stars for quick access
 
 ## Getting Started
 
-First, run the development server:
+### Prerequisites
 
-```bash
-npm run dev
+- Node.js 18.0 or higher
+- npm or yarn
+
+### Installation
+
+1. Clone the repository:
+   ```
+   git clone https://github.com/yourusername/data-organizer.git
+   cd data-organizer
+   ```
+
+2. Install dependencies:
+   ```
+   npm install
+   # or
+   yarn install
+   ```
+
+3. Run the development server:
+   ```
+   npm run dev
+   # or
+   yarn dev
+   ```
+
+4. Open [http://localhost:3000](http://localhost:3000) in your browser.
+
+### Building for Production
+
+```
+npm run build
 # or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+yarn build
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## How to Use
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+### Adding Messages Manually
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+1. Go to the "Messages" tab
+2. Click "Add New Message"
+3. Enter the message content and select the source (WhatsApp or Telegram)
+4. Click "Add Message"
 
-## Learn More
+### Forwarding Messages from WhatsApp/Telegram
 
-To learn more about Next.js, take a look at the following resources:
+1. Go to the "Setup" tab
+2. Follow the integration instructions for WhatsApp or Telegram
+3. Use the provided API endpoint to forward messages
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+### Searching Messages
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+1. Use the search bar at the top of the "Messages" tab
+2. Filter by source, type, category, or starred status
+3. Click "Search" to find matching messages
 
-## Deploy on Vercel
+### Editing Messages
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+1. Click the edit icon (✏️) on any message card
+2. Update the category, tags, or starred status
+3. Click "Save" to apply changes
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+## Technical Details
+
+- Built with Next.js and TypeScript
+- Uses IndexedDB for offline storage
+- Implements PWA features for offline use and installation
+- Responsive design with Tailwind CSS
+
+## License
+
+This project is licensed under the MIT License - see the LICENSE file for details.
+
+## Acknowledgments
+
+- Icons provided by various emoji sets
+- Built with Next.js and Tailwind CSS
