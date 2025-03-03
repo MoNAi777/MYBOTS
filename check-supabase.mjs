@@ -22,63 +22,81 @@ async function checkConnection() {
   try {
     console.log('Checking Supabase connection...');
     
-    // Try to get the server version
-    const { data, error } = await supabase.rpc('version');
+    // Try to get the server health
+    const { data, error } = await supabase.from('Message').select('count', { count: 'exact', head: true });
     
     if (error) {
       console.error('Error connecting to Supabase:', error);
       
-      // Try a simpler query
-      console.log('Trying a simpler query...');
-      const { data: tableData, error: tableError } = await supabase
-        .from('Message')
-        .select('count(*)', { count: 'exact' });
+      // Check if the table exists
+      console.log('Checking if Message table exists...');
       
-      if (tableError) {
-        console.error('Error querying Message table:', tableError);
-        console.log('Checking if table exists...');
+      try {
+        const { data: tablesData, error: tablesError } = await supabase
+          .from('pg_tables')
+          .select('tablename')
+          .eq('schemaname', 'public')
+          .eq('tablename', 'Message');
         
-        // Check if the table exists
-        const { data: schemaData, error: schemaError } = await supabase
-          .from('information_schema.tables')
-          .select('table_name')
-          .eq('table_name', 'Message');
-        
-        if (schemaError) {
-          console.error('Error checking if table exists:', schemaError);
-          return;
-        }
-        
-        if (schemaData && schemaData.length > 0) {
+        if (tablesError) {
+          console.error('Error checking tables:', tablesError);
+          console.log('You may need to create the Message table. Run setup:database script.');
+        } else if (tablesData && tablesData.length > 0) {
           console.log('Message table exists but could not query it.');
+          console.log('This might be a permissions issue. Check your RLS policies.');
         } else {
           console.log('Message table does not exist. Please run setup:database script.');
         }
-        
-        return;
+      } catch (e) {
+        console.error('Error checking tables:', e);
       }
       
-      console.log('Connected to Supabase successfully!');
-      console.log('Message count:', tableData[0].count);
       return;
     }
     
     console.log('Connected to Supabase successfully!');
-    console.log('Server version:', data);
+    console.log('Message count:', data);
     
-    // Check if the Message table exists
-    const { data: tableData, error: tableError } = await supabase
+    // Try to insert a test message
+    console.log('\nTrying to insert a test message...');
+    
+    const testMessage = {
+      content: 'Test message from check-supabase script',
+      source: 'test',
+      type: 'text',
+      createdAt: new Date().toISOString()
+    };
+    
+    const { data: insertData, error: insertError } = await supabase
       .from('Message')
-      .select('count(*)', { count: 'exact' });
+      .insert(testMessage)
+      .select('id')
+      .single();
     
-    if (tableError) {
-      console.error('Error querying Message table:', tableError);
-      console.log('Message table may not exist. Please run setup:database script.');
+    if (insertError) {
+      console.error('Error inserting test message:', insertError);
+      console.log('This might be a permissions issue. Check your RLS policies.');
       return;
     }
     
-    console.log('Message table exists!');
-    console.log('Message count:', tableData[0].count);
+    console.log('Test message inserted successfully!');
+    console.log('Message ID:', insertData.id);
+    
+    // Delete the test message
+    console.log('\nDeleting test message...');
+    
+    const { error: deleteError } = await supabase
+      .from('Message')
+      .delete()
+      .eq('id', insertData.id);
+    
+    if (deleteError) {
+      console.error('Error deleting test message:', deleteError);
+      return;
+    }
+    
+    console.log('Test message deleted successfully!');
+    console.log('\nAll Supabase operations completed successfully!');
   } catch (error) {
     console.error('Error checking Supabase connection:', error);
   }
