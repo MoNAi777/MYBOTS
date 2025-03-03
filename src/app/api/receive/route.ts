@@ -202,6 +202,8 @@ export async function POST(request: NextRequest) {
     // Try to process the message with the service
     let id: number | undefined;
     try {
+      console.log('Calling messageReceiverService.processIncomingMessage with:', { content, source, metadata });
+      
       // Process the message
       id = await messageReceiverService.processIncomingMessage(
         content,
@@ -211,6 +213,7 @@ export async function POST(request: NextRequest) {
       console.log('Message processed successfully with ID:', id);
     } catch (error) {
       console.error('Error processing message with service:', error);
+      console.error('Error details:', JSON.stringify(error));
       // We'll continue even if there's an error with IndexedDB
       // The message is still stored in our in-memory array
     }

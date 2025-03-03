@@ -13,13 +13,16 @@ class HybridDbService {
 
   async addMessage(message: Message): Promise<number> {
     try {
+      console.log('HybridDbService: Adding message to Supabase:', JSON.stringify(message));
       // Always add to server DB if possible
       const id = await supabaseDbService.addMessage(message);
+      console.log('HybridDbService: Message added to Supabase with ID:', id);
       
       // If we're on the client, also add to IndexedDB for offline access
       if (!this.isServer()) {
         try {
           await indexedDbService.addMessage(message);
+          console.log('HybridDbService: Message also added to IndexedDB');
         } catch (error) {
           console.warn('Failed to add message to IndexedDB:', error);
           // Continue anyway since we've already added to the server
@@ -28,9 +31,13 @@ class HybridDbService {
       
       return id;
     } catch (error) {
+      console.error('HybridDbService: Error adding message to Supabase:', error);
+      console.error('HybridDbService: Error details:', JSON.stringify(error, null, 2));
+      
       // If server DB fails but we're on client, try IndexedDB as fallback
       if (!this.isServer()) {
         try {
+          console.log('HybridDbService: Falling back to IndexedDB');
           return await indexedDbService.addMessage(message);
         } catch (indexedDbError) {
           console.error('Failed to add message to both databases:', error, indexedDbError);
