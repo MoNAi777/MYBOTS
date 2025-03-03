@@ -4,38 +4,25 @@ import supabase from './supabase';
 class SupabaseDbService {
   async addMessage(message: Message): Promise<number> {
     try {
-      console.log('SupabaseDbService: Adding message to Supabase:', JSON.stringify(message));
-      console.log('SupabaseDbService: Using Supabase client with URL:', process.env.NEXT_PUBLIC_SUPABASE_URL);
-      
-      const messageData = {
-        content: message.content,
-        source: message.source,
-        type: message.type,
-        category: message.category || null,
-        tags: message.tags || [],
-        createdAt: message.createdAt instanceof Date ? message.createdAt.toISOString() : message.createdAt,
-        starred: message.starred || false,
-        metadata: message.metadata || null,
-      };
-      
-      console.log('SupabaseDbService: Prepared message data:', JSON.stringify(messageData));
-      
       const { data, error } = await supabase
         .from('Message')
-        .insert(messageData)
+        .insert({
+          content: message.content,
+          source: message.source,
+          type: message.type,
+          category: message.category || null,
+          tags: message.tags || [],
+          createdAt: message.createdAt instanceof Date ? message.createdAt.toISOString() : message.createdAt,
+          starred: message.starred || false,
+          metadata: message.metadata || null,
+        })
         .select('id')
         .single();
 
-      if (error) {
-        console.error('SupabaseDbService: Error from Supabase:', error);
-        throw error;
-      }
-      
-      console.log('SupabaseDbService: Message added successfully with ID:', data.id);
+      if (error) throw error;
       return data.id;
     } catch (error) {
-      console.error('SupabaseDbService: Error adding message to Supabase:', error);
-      console.error('SupabaseDbService: Error details:', JSON.stringify(error, null, 2));
+      console.error('Error adding message to Supabase:', error);
       throw new Error('Could not add message to database');
     }
   }

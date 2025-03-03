@@ -6,7 +6,16 @@
     "dev": "next dev --turbopack",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint",
+    "db:migrate": "prisma migrate dev",
+    "db:setup": "prisma db push",
+    "db:studio": "prisma studio",
+    "setup:telegram": "node setup-webhook.mjs",
+    "setup:database": "node setup-database.mjs",
+    "check:supabase": "node check-supabase.mjs",
+    "check:integrations": "node check-integrations.mjs",
+    "check:deployment": "node check-deployment.mjs",
+    "check:all": "node check-all.mjs"
   },
   "dependencies": {
     "@prisma/client": "^6.4.1",

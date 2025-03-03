@@ -13,16 +13,13 @@ class HybridDbService {
 
   async addMessage(message: Message): Promise<number> {
     try {
-      console.log('HybridDbService: Adding message to Supabase:', JSON.stringify(message));
       // Always add to server DB if possible
       const id = await supabaseDbService.addMessage(message);
-      console.log('HybridDbService: Message added to Supabase with ID:', id);
       
       // If we're on the client, also add to IndexedDB for offline access
       if (!this.isServer()) {
         try {
           await indexedDbService.addMessage(message);
-          console.log('HybridDbService: Message also added to IndexedDB');
         } catch (error) {
           console.warn('Failed to add message to IndexedDB:', error);
           // Continue anyway since we've already added to the server
@@ -31,13 +28,9 @@ class HybridDbService {
       
       return id;
     } catch (error) {
-      console.error('HybridDbService: Error adding message to Supabase:', error);
-      console.error('HybridDbService: Error details:', JSON.stringify(error, null, 2));
-      
       // If server DB fails but we're on client, try IndexedDB as fallback
       if (!this.isServer()) {
         try {
-          console.log('HybridDbService: Falling back to IndexedDB');
           return await indexedDbService.addMessage(message);
         } catch (indexedDbError) {
           console.error('Failed to add message to both databases:', error, indexedDbError);
@@ -160,84 +153,6 @@ class HybridDbService {
       console.error('Failed to sync databases:', error);
       throw new Error('Could not sync databases');
     }
-  }
-
-  // Export messages to CSV format
-  async exportToCSV(options: {
-    source?: 'whatsapp' | 'telegram';
-    type?: 'text' | 'link' | 'video' | 'image' | 'file' | 'app' | 'other';
-    category?: string;
-    starred?: boolean;
-    dateRange?: { start: Date; end: Date };
-  } = {}): Promise<string> {
-    if (this.isServer()) {
-      throw new Error('Export to CSV is only available on the client');
-    }
-
-    try {
-      // Get messages based on filters
-      let messages = await this.getMessages({
-        source: options.source,
-        type: options.type,
-        category: options.category,
-        starred: options.starred
-      });
-
-      // Apply date range filter if provided
-      if (options.dateRange) {
-        messages = messages.filter(message => {
-          const messageDate = new Date(message.createdAt);
-          return messageDate >= options.dateRange!.start && messageDate <= options.dateRange!.end;
-        });
-      }
-
-      // Define CSV headers
-      const headers = [
-        'ID',
-        'Content',
-        'Source',
-        'Type',
-        'Category',
-        'Tags',
-        'Created At',
-        'Starred'
-      ];
-
-      // Convert messages to CSV rows
-      const rows = messages.map(message => {
-        return [
-          message.id,
-          this.escapeCSV(message.content),
-          message.source,
-          message.type,
-          message.category || '',
-          message.tags ? message.tags.join(';') : '',
-          new Date(message.createdAt).toISOString(),
-          message.starred ? 'Yes' : 'No'
-        ];
-      });
-
-      // Combine headers and rows
-      const csvContent = [
-        headers.join(','),
-        ...rows.map(row => row.join(','))
-      ].join('\n');
-
-      return csvContent;
-    } catch (error) {
-      console.error('Failed to export messages to CSV:', error);
-      throw new Error('Could not export messages to CSV');
-    }
-  }
-
-  // Helper method to escape CSV values
-  private escapeCSV(value: string): string {
-    // If the value contains commas, newlines, or double quotes, wrap it in double quotes
-    if (value.includes(',') || value.includes('\n') || value.includes('"')) {
-      // Replace double quotes with two double quotes
-      return `"${value.replace(/"/g, '""')}"`;
-    }
-    return value;
   }
 }
 

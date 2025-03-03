@@ -7,22 +7,6 @@ const nextConfig: NextConfig = {
     // your project has ESLint errors.
     ignoreDuringBuilds: true,
   },
-  // Add experimental configuration to ensure API routes work correctly
-  experimental: {
-    serverComponentsExternalPackages: [],
-    serverActions: {
-      allowedOrigins: ['localhost:3000', 'mybots-cdue-seven.vercel.app']
-    },
-  },
-  // Add rewrites to ensure API routes are properly handled
-  async rewrites() {
-    return [
-      {
-        source: '/api/:path*',
-        destination: '/api/:path*',
-      },
-    ];
-  },
 };
 
 export default nextConfig;

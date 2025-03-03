@@ -1,8 +1,17 @@
 // Simple script to set up the Telegram webhook
 import fetch from 'node-fetch';
+import dotenv from 'dotenv';
+
+// Load environment variables from .env.local
+dotenv.config({ path: '.env.local' });
 
 // Get the bot token from command line arguments or use the one from .env.local
-const botToken = process.argv[2] || '8037981029:AAHlFv-PXX2vlg36hV2_MNv5eld-3OLOH_s';
+const botToken = process.argv[2] || process.env.TELEGRAM_BOT_TOKEN || '';
+
+if (!botToken) {
+  console.error('Error: No bot token provided. Please provide it as a command line argument or set TELEGRAM_BOT_TOKEN in .env.local');
+  process.exit(1);
+}
 
 // Command can be 'set', 'delete', or 'info'
 const command = process.argv[3] || 'info';

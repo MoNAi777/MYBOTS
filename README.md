@@ -1,4 +1,4 @@
-# Data Organizer - DEPLOYMENT TEST
+# Data Organizer
 
 A Progressive Web App (PWA) for organizing and searching through your WhatsApp and Telegram messages.
 

@@ -3,7 +3,6 @@ import dbService from './db';
 import aiService from './ai';
 import twilioConfig from './twilioConfig';
 import telegramConfig from './telegramConfig';
-import hybridDbService from './hybridDb';
 
 export class MessageReceiverService {
   // Generate a unique ID for the app to use in deep links
@@ -52,8 +51,6 @@ export class MessageReceiverService {
   async setupTelegramWebhook(baseUrl: string): Promise<boolean> {
     try {
       const webhookUrl = `${baseUrl}/api/receive?source=telegram`;
-      console.log('Setting up Telegram webhook with URL:', webhookUrl);
-      
       const response = await fetch(`https://api.telegram.org/bot${telegramConfig.botToken}/setWebhook`, {
         method: 'POST',
         headers: {
@@ -66,7 +63,6 @@ export class MessageReceiverService {
       });
       
       const data = await response.json();
-      console.log('Telegram webhook setup response:', data);
       return data.ok === true;
     } catch (error) {
       console.error('Error setting up Telegram webhook:', error);
@@ -81,8 +77,6 @@ export class MessageReceiverService {
     metadata: Record<string, any> = {}
   ): Promise<number> {
     try {
-      console.log(`Processing incoming ${source} message:`, content);
-      
       // Create a new message object
       const message: Message = {
         content,
@@ -92,16 +86,11 @@ export class MessageReceiverService {
         metadata
       };
       
-      console.log('Message object created:', message);
-      
       // Process the message with AI to add categories and tags
       const processedMessage = aiService.processMessage(message);
-      console.log('Message processed with AI:', processedMessage);
       
-      // Save the message to the database using the hybrid service
-      // This will try Supabase first, then fall back to IndexedDB if needed
-      const id = await hybridDbService.addMessage(processedMessage);
-      console.log('Message saved to database with ID:', id);
+      // Save the message to the database
+      const id = await dbService.addMessage(processedMessage);
       
       return id;
     } catch (error) {
@@ -115,7 +104,6 @@ export class MessageReceiverService {
     content: string, 
     source: 'whatsapp' | 'telegram'
   ): Promise<number> {
-    console.log(`Simulating ${source} message:`, content);
     return this.processIncomingMessage(content, source);
   }
 }
