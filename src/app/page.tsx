@@ -124,7 +124,7 @@ export default function Home() {
                   <polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline>
                   <line x1="12" y1="22.08" x2="12" y2="12"></line>
                 </svg>
-                Data Organizer - Updated
+                Data Organizer - FIXED 9:30AM
               </h1>
               <p className="text-indigo-100 text-base max-w-2xl">Organize and search through your WhatsApp and Telegram messages</p>
             </div>
