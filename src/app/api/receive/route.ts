@@ -214,8 +214,55 @@ export async function POST(request: NextRequest) {
     } catch (error) {
       console.error('Error processing message with service:', error);
       console.error('Error details:', JSON.stringify(error));
-      // We'll continue even if there's an error with IndexedDB
-      // The message is still stored in our in-memory array
+      
+      // Try a direct approach to store the message in Supabase
+      try {
+        console.log('Trying direct Supabase insertion as fallback');
+        
+        // Import Supabase client directly
+        const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
+        const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
+        
+        if (!supabaseUrl || !supabaseAnonKey) {
+          console.error('Supabase configuration is missing. Please check your environment variables.');
+          throw new Error('Supabase configuration is missing');
+        }
+        
+        console.log('Using Supabase URL:', supabaseUrl);
+        
+        // Create Supabase client
+        const { createClient } = await import('@supabase/supabase-js');
+        const supabase = createClient(supabaseUrl, supabaseAnonKey);
+        
+        // Prepare message data
+        const messageData = {
+          content,
+          source,
+          type: 'text', // Default to text type
+          createdAt: new Date().toISOString(),
+          metadata
+        };
+        
+        console.log('Inserting message directly into Supabase:', messageData);
+        
+        // Insert message into Supabase
+        const { data, error } = await supabase
+          .from('Message')
+          .insert(messageData)
+          .select('id')
+          .single();
+        
+        if (error) {
+          console.error('Error inserting message directly into Supabase:', error);
+          throw error;
+        }
+        
+        console.log('Message inserted directly into Supabase with ID:', data.id);
+        id = data.id;
+      } catch (directError) {
+        console.error('Error with direct Supabase insertion:', directError);
+        // Continue even if direct insertion fails
+      }
     }
     
     // For Telegram, we need to return a 200 OK response
