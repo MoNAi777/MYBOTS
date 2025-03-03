@@ -7,6 +7,7 @@ import MessageCard from './components/MessageCard';
 import IntegrationGuide from './components/IntegrationGuide';
 import MessageStats from './components/MessageStats';
 import WebhookMessages from './components/WebhookMessages';
+import DataExportImport from './components/DataExportImport';
 import hybridDbService from './services/hybridDb';
 import messageReceiverService from './services/messageReceiver';
 import { Message } from './services/db';
@@ -14,11 +15,13 @@ import { Message } from './services/db';
 export default function Home() {
   const [messages, setMessages] = useState<Message[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState<'messages' | 'setup' | 'stats'>('messages');
+  const [activeTab, setActiveTab] = useState<'messages' | 'setup' | 'stats' | 'data'>('messages');
   const [whatsappLink, setWhatsappLink] = useState('');
   const [telegramLink, setTelegramLink] = useState('');
   const [isAddMessageOpen, setIsAddMessageOpen] = useState(false);
   const [isSyncing, setIsSyncing] = useState(false);
+  const [showWebhookPanel, setShowWebhookPanel] = useState(false);
+  const [webhookCount, setWebhookCount] = useState(0);
   
   // Load messages on component mount
   useEffect(() => {
@@ -28,8 +31,27 @@ export default function Home() {
     if (typeof window !== 'undefined') {
       setWhatsappLink(messageReceiverService.getWhatsAppDeepLink());
       setTelegramLink(messageReceiverService.getTelegramDeepLink());
+      
+      // Check for new webhook messages every 30 seconds
+      const intervalId = setInterval(checkWebhookMessages, 30000);
+      return () => clearInterval(intervalId);
     }
   }, []);
+  
+  // Check for new webhook messages
+  const checkWebhookMessages = async () => {
+    try {
+      const response = await fetch('/api/receive?showMessages=true');
+      if (response.ok) {
+        const data = await response.json();
+        if (data.webhookMessages && data.webhookMessages.length > 0) {
+          setWebhookCount(data.webhookMessages.length);
+        }
+      }
+    } catch (error) {
+      console.error('Error checking webhook messages:', error);
+    }
+  };
   
   // Load all messages from the database
   const loadMessages = async () => {
@@ -79,27 +101,78 @@ export default function Home() {
     loadMessages();
   };
   
+  // Toggle webhook panel
+  const toggleWebhookPanel = () => {
+    setShowWebhookPanel(!showWebhookPanel);
+    if (!showWebhookPanel) {
+      setWebhookCount(0); // Reset count when opening panel
+    }
+  };
+  
   return (
-    <main className="min-h-screen flex flex-col">
-      <header className="bg-gradient-to-r from-indigo-600 via-purple-600 to-violet-600 text-white py-8 relative overflow-hidden">
+    <main className="min-h-screen flex flex-col bg-gray-50">
+      <header className="bg-gradient-to-r from-indigo-600 via-purple-600 to-violet-600 text-white py-6 relative overflow-hidden">
         <div className="absolute inset-0 opacity-20">
           <div className="absolute top-0 left-0 w-full h-full bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiB2aWV3Qm94PSIwIDAgMTI4MCAxNDAiIHByZXNlcnZlQXNwZWN0UmF0aW89Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PGcgZmlsbD0iI2ZmZmZmZiI+PHBhdGggZD0iTTEyODAgMy40QzEwNTAuNTkgMTggMTAxOS40IDg0Ljg5IDczNC40MiA4NC44OWMtMzIwIDAtMzIwLTg0LjMtNjQwLTg0LjNDNTkuNC41OSAyOC4yIDEuNiAwIDMuNFYxNDBoMTI4MHoiIGZpbGwtb3BhY2l0eT0iLjMiLz48cGF0aCBkPSJNMCAyNC4zMWM0My40Ni01LjY5IDk0LjU2LTkuMjUgMTU4LjQyLTkuMjUgMzIwIDAgMzIwIDg5LjI0IDY0MCA4OS4yNCAyNTYuMTMgMCAzMDcuMjgtNTcuMTYgNDgxLjU4LTgwVjE0MEgweiIgZmlsbC1vcGFjaXR5PSIuNSIvPjxwYXRoIGQ9Ik0xMjgwIDUxLjc2Yy0yMDEgMTIuNDktMjQyLjQzIDUzLjQtNTEzLjU4IDUzLjQtMzIwIDAtMzIwLTU3LTY0MC01Ny00OC44NS4wMS05MC4yMSAxLjM1LTEyNi40MiAzLjZWMTQwaDEyODB6Ii8+PC9nPjwvc3ZnPg==')]"></div>
         </div>
-        <div className="container mx-auto px-4 relative z-10">
-          <h1 className="text-4xl font-bold mb-2 flex items-center">
-            <svg xmlns="http://www.w3.org/2000/svg" className="h-10 w-10 mr-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path>
-              <polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline>
-              <line x1="12" y1="22.08" x2="12" y2="12"></line>
-            </svg>
-            Data Organizer
-          </h1>
-          <p className="text-indigo-100 text-lg max-w-2xl">Organize and search through your WhatsApp and Telegram messages</p>
+        <div className="responsive-container relative z-10">
+          <div className="flex justify-between items-center">
+            <div>
+              <h1 className="text-3xl font-bold mb-1 flex items-center">
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8 mr-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path>
+                  <polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline>
+                  <line x1="12" y1="22.08" x2="12" y2="12"></line>
+                </svg>
+                Data Organizer
+              </h1>
+              <p className="text-indigo-100 text-base max-w-2xl">Organize and search through your WhatsApp and Telegram messages</p>
+            </div>
+            <div className="flex items-center space-x-3">
+              <button 
+                onClick={handleSync}
+                disabled={isSyncing}
+                className={`btn ${isSyncing ? 'bg-indigo-400 cursor-not-allowed' : 'bg-white text-indigo-600 hover:bg-indigo-50'} px-3 py-1.5 rounded-lg text-sm font-medium flex items-center shadow-sm`}
+              >
+                {isSyncing ? (
+                  <>
+                    <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-indigo-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                    Syncing...
+                  </>
+                ) : (
+                  <>
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M21 2v6h-6"></path>
+                      <path d="M3 12a9 9 0 0 1 15-6.7L21 8"></path>
+                      <path d="M3 22v-6h6"></path>
+                      <path d="M21 12a9 9 0 0 1-15 6.7L3 16"></path>
+                    </svg>
+                    Sync
+                  </>
+                )}
+              </button>
+              <button 
+                onClick={toggleWebhookPanel}
+                className="relative btn bg-white text-indigo-600 hover:bg-indigo-50 px-3 py-1.5 rounded-lg text-sm font-medium flex items-center shadow-sm"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M22 12h-4l-3 9L9 3l-3 9H2"></path>
+                </svg>
+                Webhooks
+                {webhookCount > 0 && (
+                  <span className="notification-badge">{webhookCount}</span>
+                )}
+              </button>
+            </div>
+          </div>
         </div>
       </header>
       
-      <div className="container mx-auto px-4 py-8 flex-grow">
-        <div className="mb-6">
+      <div className="responsive-container py-6 flex-grow">
+        <div className="mb-6 bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
           <div className="flex border-b border-gray-200 overflow-x-auto scrollbar-hide">
             <button
               className={`py-3 px-5 font-medium text-sm transition-colors flex items-center ${
@@ -143,96 +216,134 @@ export default function Home() {
               </svg>
               Setup
             </button>
+            <button
+              className={`py-3 px-5 font-medium text-sm transition-colors flex items-center ${
+                activeTab === 'data'
+                  ? 'text-indigo-600 border-b-2 border-indigo-600'
+                  : 'text-gray-600 hover:text-gray-900'
+              }`}
+              onClick={() => setActiveTab('data')}
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <ellipse cx="12" cy="5" rx="9" ry="3"></ellipse>
+                <path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"></path>
+                <path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"></path>
+              </svg>
+              Data Management
+            </button>
           </div>
         </div>
         
         {activeTab === 'messages' ? (
-          <>
-            {isAddMessageOpen ? (
-              <div className="card p-6 mb-6 shadow-md">
-                <div className="flex justify-between items-center mb-4">
-                  <h2 className="text-xl font-semibold gradient-text">Add New Message</h2>
-                  <button 
-                    onClick={() => setIsAddMessageOpen(false)}
-                    className="text-gray-500 hover:text-gray-700 transition-colors p-1 rounded-full hover:bg-gray-100"
-                  >
-                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                      <line x1="18" y1="6" x2="6" y2="18"></line>
-                      <line x1="6" y1="6" x2="18" y2="18"></line>
-                    </svg>
-                  </button>
-                </div>
-                <AddMessageForm onMessageAdded={handleMessageAdded} />
-              </div>
-            ) : (
-              <button
-                className="btn btn-primary w-full mb-6 py-3 group"
-                onClick={() => setIsAddMessageOpen(true)}
-              >
-                <svg className="mr-2 group-hover:animate-pulse" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <line x1="12" y1="5" x2="12" y2="19"></line>
-                  <line x1="5" y1="12" x2="19" y2="12"></line>
-                </svg>
-                Add New Message
-              </button>
-            )}
-            
-            <div className="card p-6 mb-6 shadow-md">
-              <SearchFilters onSearch={handleSearchResults} onReset={handleSearchReset} />
-            </div>
-            
-            <div className="mt-8">
-              <h2 className="text-xl font-semibold mb-4 gradient-text">Your Messages</h2>
-              
-              {isLoading ? (
-                <div className="text-center py-12">
-                  <div className="inline-block animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-indigo-600"></div>
-                  <p className="mt-4 text-gray-600">Loading messages...</p>
-                </div>
-              ) : messages.length === 0 ? (
-                <div className="card p-8 text-center">
-                  <div className="w-20 h-20 bg-gradient-to-br from-indigo-100 to-violet-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-indigo-600">
-                      <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
-                    </svg>
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <div className={`lg:col-span-${showWebhookPanel ? '2' : '3'} space-y-6 animate-fade-in`}>
+              {isAddMessageOpen ? (
+                <div className="card p-6">
+                  <div className="flex justify-between items-center mb-4">
+                    <h2 className="text-xl font-semibold gradient-text">Add New Message</h2>
+                    <button 
+                      onClick={() => setIsAddMessageOpen(false)}
+                      className="text-gray-500 hover:text-gray-700 transition-colors p-1 rounded-full hover:bg-gray-100"
+                    >
+                      <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <line x1="18" y1="6" x2="6" y2="18"></line>
+                        <line x1="6" y1="6" x2="18" y2="18"></line>
+                      </svg>
+                    </button>
                   </div>
-                  <p className="text-gray-700 text-xl mb-2 font-medium">No messages found</p>
-                  <p className="text-gray-500 max-w-md mx-auto">
-                    Add a new message or check the Setup tab to learn how to forward messages from WhatsApp and Telegram
-                  </p>
+                  <AddMessageForm onMessageAdded={handleMessageAdded} />
                 </div>
               ) : (
-                <div className="space-y-4">
-                  {messages.map((message) => (
-                    <MessageCard
-                      key={message.id}
-                      message={message}
-                      onUpdate={loadMessages}
-                    />
-                  ))}
-                </div>
+                <button
+                  className="btn btn-primary w-full py-3 group"
+                  onClick={() => setIsAddMessageOpen(true)}
+                >
+                  <svg className="mr-2 group-hover:animate-pulse" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <line x1="12" y1="5" x2="12" y2="19"></line>
+                    <line x1="5" y1="12" x2="19" y2="12"></line>
+                  </svg>
+                  Add New Message
+                </button>
               )}
+              
+              <div className="card p-6">
+                <SearchFilters onSearch={handleSearchResults} onReset={handleSearchReset} />
+              </div>
+              
+              <div>
+                <div className="flex justify-between items-center mb-4">
+                  <h2 className="text-xl font-semibold gradient-text">Your Messages</h2>
+                </div>
+                
+                {isLoading ? (
+                  <div className="text-center py-12 card">
+                    <div className="inline-block animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-indigo-600"></div>
+                    <p className="mt-4 text-gray-600">Loading messages...</p>
+                  </div>
+                ) : messages.length === 0 ? (
+                  <div className="card p-8 text-center">
+                    <div className="w-20 h-20 bg-gradient-to-br from-indigo-100 to-violet-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                      <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-indigo-600">
+                        <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
+                      </svg>
+                    </div>
+                    <p className="text-gray-700 text-xl mb-2 font-medium">No messages found</p>
+                    <p className="text-gray-500 max-w-md mx-auto">
+                      Add a new message or check the Setup tab to learn how to forward messages from WhatsApp and Telegram
+                    </p>
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    {messages.map((message) => (
+                      <MessageCard
+                        key={message.id}
+                        message={message}
+                        onUpdate={loadMessages}
+                      />
+                    ))}
+                  </div>
+                )}
+              </div>
             </div>
-          </>
+            
+            {showWebhookPanel && (
+              <div className="lg:col-span-1 animate-slide-up">
+                <div className="sticky top-6">
+                  <div className="flex justify-between items-center mb-4">
+                    <h2 className="text-xl font-semibold gradient-text">Recent Webhooks</h2>
+                    <button 
+                      onClick={toggleWebhookPanel}
+                      className="text-gray-500 hover:text-gray-700 transition-colors p-1 rounded-full hover:bg-gray-100"
+                    >
+                      <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <line x1="18" y1="6" x2="6" y2="18"></line>
+                        <line x1="6" y1="6" x2="18" y2="18"></line>
+                      </svg>
+                    </button>
+                  </div>
+                  <WebhookMessages />
+                </div>
+              </div>
+            )}
+          </div>
         ) : activeTab === 'stats' ? (
           <MessageStats />
+        ) : activeTab === 'data' ? (
+          <DataExportImport />
         ) : (
           <>
             <IntegrationGuide whatsappLink={whatsappLink} telegramLink={telegramLink} />
-            <div className="mt-8">
-              <WebhookMessages />
-            </div>
           </>
         )}
       </div>
       
-      <footer className="bg-gradient-to-r from-indigo-600 via-purple-600 to-violet-600 text-white mt-auto py-6 relative overflow-hidden">
+      <footer className="bg-gradient-to-r from-indigo-600 via-purple-600 to-violet-600 text-white mt-auto py-4 relative overflow-hidden">
         <div className="absolute inset-0 opacity-20">
           <div className="absolute bottom-0 left-0 w-full h-full bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiB2aWV3Qm94PSIwIDAgMTI4MCAxNDAiIHByZXNlcnZlQXNwZWN0UmF0aW89Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PGcgZmlsbD0iI2ZmZmZmZiI+PHBhdGggZD0iTTAgNDcuNDRMMTcwIDBsNjI2LjQ4IDk0LjA5TDExMTAgODcuMTFsMTcwLTM5LjY3VjE0MEgweiIgZmlsbC1vcGFjaXR5PSIuNSIvPjxwYXRoIGQ9Ik0wIDkwLjcybDE0MC0yOC4yOCAzMTUuNTIgMjQuMTRMNzk2LjQ4IDY1LjggMTE0MCAxMDQuODlsMTQwLTE0LjE3VjE0MEgweiIvPjwvZz48L3N2Zz4=')]"></div>
         </div>
-        <div className="container mx-auto px-4 text-center relative z-10">
+        <div className="responsive-container text-center relative z-10">
           <p className="text-lg font-medium">Data Organizer - A PWA for organizing your messages</p>
-          <p className="mt-1 text-indigo-100">All data is stored locally on your device</p>
+          <p className="mt-1 text-indigo-100 text-sm">All data is stored locally on your device and synced with Supabase</p>
         </div>
       </footer>
     </main>

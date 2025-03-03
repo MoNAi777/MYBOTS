@@ -154,6 +154,84 @@ class HybridDbService {
       throw new Error('Could not sync databases');
     }
   }
+
+  // Export messages to CSV format
+  async exportToCSV(options: {
+    source?: 'whatsapp' | 'telegram';
+    type?: 'text' | 'link' | 'video' | 'image' | 'file' | 'app' | 'other';
+    category?: string;
+    starred?: boolean;
+    dateRange?: { start: Date; end: Date };
+  } = {}): Promise<string> {
+    if (this.isServer()) {
+      throw new Error('Export to CSV is only available on the client');
+    }
+
+    try {
+      // Get messages based on filters
+      let messages = await this.getMessages({
+        source: options.source,
+        type: options.type,
+        category: options.category,
+        starred: options.starred
+      });
+
+      // Apply date range filter if provided
+      if (options.dateRange) {
+        messages = messages.filter(message => {
+          const messageDate = new Date(message.createdAt);
+          return messageDate >= options.dateRange!.start && messageDate <= options.dateRange!.end;
+        });
+      }
+
+      // Define CSV headers
+      const headers = [
+        'ID',
+        'Content',
+        'Source',
+        'Type',
+        'Category',
+        'Tags',
+        'Created At',
+        'Starred'
+      ];
+
+      // Convert messages to CSV rows
+      const rows = messages.map(message => {
+        return [
+          message.id,
+          this.escapeCSV(message.content),
+          message.source,
+          message.type,
+          message.category || '',
+          message.tags ? message.tags.join(';') : '',
+          new Date(message.createdAt).toISOString(),
+          message.starred ? 'Yes' : 'No'
+        ];
+      });
+
+      // Combine headers and rows
+      const csvContent = [
+        headers.join(','),
+        ...rows.map(row => row.join(','))
+      ].join('\n');
+
+      return csvContent;
+    } catch (error) {
+      console.error('Failed to export messages to CSV:', error);
+      throw new Error('Could not export messages to CSV');
+    }
+  }
+
+  // Helper method to escape CSV values
+  private escapeCSV(value: string): string {
+    // If the value contains commas, newlines, or double quotes, wrap it in double quotes
+    if (value.includes(',') || value.includes('\n') || value.includes('"')) {
+      // Replace double quotes with two double quotes
+      return `"${value.replace(/"/g, '""')}"`;
+    }
+    return value;
+  }
 }
 
 // Create a singleton instance
