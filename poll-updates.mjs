@@ -1,8 +1,14 @@
 // Script to poll for updates from the Telegram Bot API
 import fetch from 'node-fetch';
+import dotenv from 'dotenv';
+dotenv.config({ path: '.env.local' });
 
 // Get the bot token from command line arguments or use the one from .env.local
-const botToken = process.argv[2] || '8037981029:AAHlFv-PXX2vlg36hV2_MNv5eld-3OLOH_s';
+const botToken = process.argv[2] || process.env.TELEGRAM_BOT_TOKEN;
+if (!botToken) {
+  console.error('Error: Telegram bot token is required. Provide it as an argument or set TELEGRAM_BOT_TOKEN environment variable.');
+  process.exit(1);
+}
 
 // The local server URL
 const localServerUrl = 'http://localhost:3000/api/receive?source=telegram';
