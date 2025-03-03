@@ -44,8 +44,10 @@ export default function Home() {
       const response = await fetch('/api/receive?showMessages=true');
       if (response.ok) {
         const data = await response.json();
+        console.log('Checking webhook messages:', data.webhookMessages?.length || 0);
         if (data.webhookMessages && data.webhookMessages.length > 0) {
           setWebhookCount(data.webhookMessages.length);
+          setShowWebhookPanel(true); // Auto-show the webhook panel when messages are available
         }
       }
     } catch (error) {
@@ -57,7 +59,9 @@ export default function Home() {
   const loadMessages = async () => {
     setIsLoading(true);
     try {
+      console.log('Loading messages from database...');
       const allMessages = await hybridDbService.getMessages();
+      console.log(`Loaded ${allMessages.length} messages from database`);
       setMessages(allMessages.sort((a, b) => {
         return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
       }));

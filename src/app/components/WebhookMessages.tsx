@@ -27,6 +27,7 @@ export default function WebhookMessages() {
       }
       
       const data = await response.json();
+      console.log('Webhook messages received:', data.webhookMessages);
       setMessages(data.webhookMessages || []);
       setLastUpdated(new Date());
       setError(null);
@@ -45,7 +46,7 @@ export default function WebhookMessages() {
     let intervalId: NodeJS.Timeout | null = null;
     
     if (autoRefresh) {
-      intervalId = setInterval(fetchWebhookMessages, 10000);
+      intervalId = setInterval(fetchWebhookMessages, 5000); // Poll every 5 seconds instead of 10
     }
     
     return () => {

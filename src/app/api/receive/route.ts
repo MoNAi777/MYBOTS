@@ -28,12 +28,17 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
+    console.log('Webhook received:', new Date().toISOString());
+    
     // Get the source from the query parameters
     const searchParams = request.nextUrl.searchParams;
     const source = searchParams.get('source') as 'whatsapp' | 'telegram';
     
+    console.log('Source:', source);
+    
     // Validate the source
     if (!source || (source !== 'whatsapp' && source !== 'telegram')) {
+      console.error('Invalid source:', source);
       return NextResponse.json(
         { error: 'Invalid source. Must be "whatsapp" or "telegram"' },
         { status: 400 }
@@ -45,16 +50,19 @@ export async function POST(request: NextRequest) {
     let metadata: Record<string, any> = {};
     
     const contentType = request.headers.get('content-type') || '';
+    console.log('Content-Type:', contentType);
     
     if (contentType.includes('application/json')) {
       // Handle JSON data (our custom format or Telegram)
       try {
         const body = await request.json();
+        console.log('JSON body received:', JSON.stringify(body));
         
         if (source === 'telegram') {
           // Handle Telegram webhook format
           // Telegram sends updates in a specific format
           if (!body.message) {
+            console.error('Invalid Telegram webhook data. No message found:', JSON.stringify(body));
             return NextResponse.json(
               { error: 'Invalid Telegram webhook data. No message found.' },
               { status: 400 }
@@ -105,6 +113,7 @@ export async function POST(request: NextRequest) {
         } else {
           // Handle our custom JSON format
           if (!body.content || typeof body.content !== 'string') {
+            console.error('Invalid content in JSON body:', JSON.stringify(body));
             return NextResponse.json(
               { error: 'Invalid content. Must provide a content field with a string value' },
               { status: 400 }
@@ -115,20 +124,23 @@ export async function POST(request: NextRequest) {
           metadata = body.metadata || {};
         }
       } catch (error) {
+        console.error('Error parsing JSON body:', error);
         return NextResponse.json(
           { error: 'Invalid JSON body', details: (error as Error).message },
           { status: 400 }
         );
       }
-    } else if (contentType.includes('application/x-www-form-urlencoded')) {
+    } else if (contentType.includes('application/x-www-form-urlencoded') || contentType.includes('multipart/form-data')) {
       // Handle form data (Twilio format)
       try {
         const formData = await request.formData();
+        console.log('Form data received:', Object.fromEntries(formData.entries()));
         
         // For WhatsApp, Twilio sends the message in the 'Body' field
         content = formData.get('Body')?.toString() || '';
         
         if (!content) {
+          console.error('No message content found in form data');
           return NextResponse.json(
             { error: 'No message content found in the request' },
             { status: 400 }
@@ -158,17 +170,21 @@ export async function POST(request: NextRequest) {
           metadata.media = mediaItems;
         }
       } catch (error) {
+        console.error('Error parsing form data:', error);
         return NextResponse.json(
           { error: 'Failed to parse form data', details: (error as Error).message },
           { status: 400 }
         );
       }
     } else {
+      console.error('Unsupported content type:', contentType);
       return NextResponse.json(
         { error: 'Unsupported content type. Use application/json or application/x-www-form-urlencoded' },
         { status: 415 }
       );
     }
+    
+    console.log('Processed message:', { content, source, metadata });
     
     // Store the message in our in-memory array
     webhookMessages.push({
@@ -192,8 +208,9 @@ export async function POST(request: NextRequest) {
         source,
         metadata
       );
+      console.log('Message processed successfully with ID:', id);
     } catch (error) {
-      console.error('Error processing message:', error);
+      console.error('Error processing message with service:', error);
       // We'll continue even if there's an error with IndexedDB
       // The message is still stored in our in-memory array
     }
@@ -211,7 +228,7 @@ export async function POST(request: NextRequest) {
       storedInMemory: true
     });
   } catch (error) {
-    console.error('Error processing message:', error);
+    console.error('Unhandled error processing webhook:', error);
     
     // Return error response
     return NextResponse.json(
