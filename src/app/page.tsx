@@ -10,6 +10,7 @@ import MessageCard from './components/MessageCard';
 import IntegrationGuide from './components/IntegrationGuide';
 import MessageStats from './components/MessageStats';
 import WebhookMessages from './components/WebhookMessages';
+import WebhookSetup from './components/WebhookSetup';
 import hybridDbService from './services/hybridDb';
 import messageReceiverService from './services/messageReceiver';
 import { Message } from './services/db';
@@ -410,12 +411,13 @@ export default function Home() {
           <MessageStats />
             </div>
           ) : (
-            <div className="fade-in">
-              <IntegrationGuide
+            <div className="space-y-6">
+              <IntegrationGuide 
                 whatsappLink={whatsappLink}
                 telegramLink={telegramLink}
                 onSync={handleSync}
               />
+              <WebhookSetup />
             </div>
         )}
         </div>
