@@ -6,7 +6,7 @@ import supabaseDbService from '../../services/supabaseDb';
 // This is a temporary solution until we implement a proper server-side database
 const webhookMessages: Array<{
   content: string;
-  source: 'whatsapp' | 'telegram';
+  source: 'whatsapp' | 'telegram' | 'sms';
   metadata: Record<string, any>;
   timestamp: string;
 }> = [];
@@ -31,12 +31,12 @@ export async function POST(request: NextRequest) {
   try {
     // Get the source from the query parameters
     const searchParams = request.nextUrl.searchParams;
-    const source = searchParams.get('source') as 'whatsapp' | 'telegram';
+    const source = searchParams.get('source') as 'whatsapp' | 'telegram' | 'sms';
     
     // Validate the source
-    if (!source || (source !== 'whatsapp' && source !== 'telegram')) {
+    if (!source || (source !== 'whatsapp' && source !== 'telegram' && source !== 'sms')) {
       return NextResponse.json(
-        { error: 'Invalid source. Must be "whatsapp" or "telegram"' },
+        { error: 'Invalid source. Must be "whatsapp", "telegram", or "sms"' },
         { status: 400 }
       );
     }
