@@ -49,14 +49,14 @@ export default function Home() {
   
   // Load all messages from the database
   const loadMessages = async () => {
-    setIsLoading(true);
     try {
-      const allMessages = await hybridDbService.getMessages();
-      setMessages(allMessages.sort((a, b) => {
-        return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
-      }));
-    } catch (error) {
-      console.error('Error loading messages:', error);
+      setIsLoading(true);
+      const allMessages = await hybridDbService.getAllMessages();
+      setMessages(allMessages);
+      setError(null);
+    } catch (err) {
+      console.error('Error loading messages:', err);
+      setError('Failed to load messages. Please try again.');
     } finally {
       setIsLoading(false);
     }
@@ -64,20 +64,19 @@ export default function Home() {
   
   // Handle message added
   const handleMessageAdded = () => {
-    loadMessages();
     setIsAddMessageOpen(false);
+    loadMessages();
   };
   
-  // Sync databases when online
+  // Handle sync with Supabase
   const handleSync = async () => {
-    if (typeof window === 'undefined') return;
-    
-    setIsSyncing(true);
     try {
-      await hybridDbService.syncDatabases();
-      await loadMessages();
-    } catch (error) {
-      console.error('Error syncing databases:', error);
+      setIsSyncing(true);
+      await hybridDbService.syncWithSupabase();
+      loadMessages();
+    } catch (err) {
+      console.error('Error syncing with Supabase:', err);
+      setError('Failed to sync with Supabase. Please try again.');
     } finally {
       setIsSyncing(false);
     }
@@ -85,323 +84,360 @@ export default function Home() {
   
   // Handle search results
   const handleSearchResults = (results: Message[]) => {
-    setMessages(results.sort((a, b) => {
-      return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
-    }));
+    setMessages(results);
   };
   
   // Handle search reset
   const handleSearchReset = () => {
     loadMessages();
   };
-
-  // Fetch messages from Supabase
+  
+  // Fetch messages
   const fetchMessages = async () => {
-    try {
-      setIsLoading(true);
-      setError(null);
-      
-      console.log('Fetching messages with filters:', {
-        source: selectedSource !== 'All Sources' ? selectedSource : undefined,
-        type: selectedType !== 'All Types' ? selectedType : undefined,
-        category: selectedCategory !== 'All Categories' ? selectedCategory : undefined,
-        starred: starredFilter === 'Starred' ? true : undefined,
-        searchTerm
-      });
-      
-      // Prepare options for the service
-      const options: any = {};
-      
-      if (selectedSource !== 'All Sources') {
-        options.source = selectedSource.toLowerCase();
-      }
-      
-      if (selectedType !== 'All Types') {
-        options.type = selectedType.toLowerCase();
-      }
-      
-      if (selectedCategory !== 'All Categories') {
-        options.category = selectedCategory;
-      }
-      
-      if (starredFilter === 'Starred') {
-        options.starred = true;
-      }
-      
-      // Get messages from the service
-      let result = await supabaseDbService.getMessages(options);
-      
-      // Apply search filter if needed (client-side filtering)
-      if (searchTerm) {
-        const lowerSearchTerm = searchTerm.toLowerCase();
-        result = result.filter(msg => 
-          msg.content.toLowerCase().includes(lowerSearchTerm) ||
-          (msg.category && msg.category.toLowerCase().includes(lowerSearchTerm)) ||
-          (msg.tags && msg.tags.some(tag => tag.toLowerCase().includes(lowerSearchTerm)))
-        );
-      }
-      
-      console.log(`Found ${result.length} messages`);
-      setMessages(result);
-    } catch (err: any) {
-      console.error('Error fetching messages:', err);
-      setError(err.message || 'Failed to fetch messages. Please try again.');
-    } finally {
-      setIsLoading(false);
-    }
+    await loadMessages();
   };
-
-  // Add a new message
+  
+  // Add new message
   const addNewMessage = () => {
-    router.push('/add-message');
+    setIsAddMessageOpen(true);
   };
-
-  // Handle message starring
+  
+  // Toggle star
   const toggleStar = async (id: number, currentStarred: boolean) => {
     try {
-      await supabaseDbService.updateMessage(id, { starred: !currentStarred });
-      
-      // Update local state
-      setMessages(messages.map(msg => 
-        msg.id === id ? { ...msg, starred: !currentStarred } : msg
-      ));
-    } catch (err: any) {
-      console.error('Error updating star status:', err);
-      setError(err.message || 'Failed to update star status. Please try again.');
+      await hybridDbService.updateMessage(id, { starred: !currentStarred });
+      loadMessages();
+    } catch (err) {
+      console.error('Error toggling star:', err);
+      setError('Failed to update message. Please try again.');
     }
   };
-
-  // Delete a message
+  
+  // Delete message
   const deleteMessage = async (id: number) => {
-    if (!confirm('Are you sure you want to delete this message?')) return;
-    
     try {
-      await supabaseDbService.deleteMessage(id);
-      
-      // Update local state
-      setMessages(messages.filter(msg => msg.id !== id));
-    } catch (err: any) {
+      await hybridDbService.deleteMessage(id);
+      loadMessages();
+    } catch (err) {
       console.error('Error deleting message:', err);
-      setError(err.message || 'Failed to delete message. Please try again.');
+      setError('Failed to delete message. Please try again.');
     }
   };
-
-  // Reset all filters
+  
+  // Reset filters
   const resetFilters = () => {
     setSearchTerm('');
     setSelectedSource('All Sources');
     setSelectedType('All Types');
     setSelectedCategory('All Categories');
     setStarredFilter('All Items');
+    loadMessages();
   };
-
-  // Apply search and filters
+  
+  // Apply search
   const applySearch = () => {
     fetchMessages();
   };
 
   return (
-    <main className="min-h-screen flex flex-col">
-      <header className="bg-gradient-to-r from-indigo-600 via-purple-600 to-violet-600 text-white py-8 relative overflow-hidden">
-        <div className="absolute inset-0 opacity-20">
-          <div className="absolute top-0 left-0 w-full h-full bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiB2aWV3Qm94PSIwIDAgMTI4MCAxNDAiIHByZXNlcnZlQXNwZWN0UmF0aW89Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PGcgZmlsbD0iI2ZmZmZmZiI+PHBhdGggZD0iTTEyODAgMy40QzEwNTAuNTkgMTggMTAxOS40IDg0Ljg5IDczNC40MiA4NC44OWMtMzIwIDAtMzIwLTg0LjMtNjQwLTg0LjNDNTkuNC41OSAyOC4yIDEuNiAwIDMuNFYxNDBoMTI4MHoiIGZpbGwtb3BhY2l0eT0iLjMiLz48cGF0aCBkPSJNMCAyNC4zMWM0My40Ni01LjY5IDk0LjU2LTkuMjUgMTU4LjQyLTkuMjUgMzIwIDAgMzIwIDg5LjI0IDY0MCA4OS4yNCAyNTYuMTMgMCAzMDcuMjgtNTcuMTYgNDgxLjU4LTgwVjE0MEgweiIgZmlsbC1vcGFjaXR5PSIuNSIvPjxwYXRoIGQ9Ik0xMjgwIDUxLjc2Yy0yMDEgMTIuNDktMjQyLjQzIDUzLjQtNTEzLjU4IDUzLjQtMzIwIDAtMzIwLTU3LTY0MC01Ny00OC44NS4wMS05MC4yMSAxLjM1LTEyNi40MiAzLjZWMTQwaDEyODB6Ii8+PC9nPjwvc3ZnPg==')]"></div>
+    <main className="min-h-screen">
+      {/* Topbar */}
+      <div className="topbar">
+        <div className="container mx-auto flex justify-between items-center">
+          <div className="flex items-center">
+            <h1 className="text-xl font-bold text-white">Dashboard</h1>
+            <span className="ml-3 px-2 py-1 text-xs rounded-full bg-indigo-900/50 text-indigo-300 border border-indigo-700/50">v0.1</span>
+          </div>
+          <div className="flex items-center space-x-4">
+            <button 
+              onClick={handleSync} 
+              className="btn btn-secondary text-sm flex items-center"
+              disabled={isSyncing}
+            >
+              {isSyncing ? (
+                <>
+                  <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                  </svg>
+                  Syncing...
+                </>
+              ) : (
+                <>
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <polyline points="1 4 1 10 7 10"></polyline>
+                    <polyline points="23 20 23 14 17 14"></polyline>
+                    <path d="M20.49 9A9 9 0 0 0 5.64 5.64L1 10m22 4l-4.64 4.36A9 9 0 0 1 3.51 15"></path>
+                  </svg>
+                  Sync
+                </>
+              )}
+            </button>
+            <button
+              onClick={addNewMessage}
+              className="btn btn-primary text-sm flex items-center"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <line x1="12" y1="5" x2="12" y2="19"></line>
+                <line x1="5" y1="12" x2="19" y2="12"></line>
+              </svg>
+              Add Message
+            </button>
+          </div>
         </div>
-        <div className="container mx-auto px-4 relative z-10">
-          <h1 className="text-4xl font-bold mb-2 flex items-center">
-            <svg xmlns="http://www.w3.org/2000/svg" className="h-10 w-10 mr-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path>
-              <polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline>
-              <line x1="12" y1="22.08" x2="12" y2="12"></line>
-            </svg>
-            Data Organizer
-            <span className="ml-3 text-sm bg-white/20 px-2 py-1 rounded-full text-white font-normal">v0.1</span>
-          </h1>
-          <p className="text-indigo-100 text-lg max-w-2xl">Organize and search through your WhatsApp and Telegram messages</p>
-        </div>
-      </header>
+      </div>
       
-      <div className="container mx-auto px-4 py-8 flex-grow">
-        <div className="mb-6">
-          <div className="flex border-b border-gray-200 overflow-x-auto scrollbar-hide">
-            <button
-              className={`nav-tab flex items-center ${
-                activeTab === 'messages'
-                  ? 'nav-tab-active'
-                  : 'nav-tab-inactive'
-              }`}
-              onClick={() => setActiveTab('messages')}
-            >
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
-              </svg>
-              Messages
-            </button>
-            <button
-              className={`nav-tab flex items-center ${
-                activeTab === 'stats'
-                  ? 'nav-tab-active'
-                  : 'nav-tab-inactive'
-              }`}
-              onClick={() => setActiveTab('stats')}
-            >
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M18 20V10"></path>
-                <path d="M12 20V4"></path>
-                <path d="M6 20v-6"></path>
-              </svg>
-              Statistics
-            </button>
-            <button
-              className={`nav-tab flex items-center ${
-                activeTab === 'setup'
-                  ? 'nav-tab-active'
-                  : 'nav-tab-inactive'
-              }`}
-              onClick={() => setActiveTab('setup')}
-            >
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <circle cx="12" cy="12" r="3"></circle>
-                <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
-              </svg>
-              Setup
-            </button>
+      <div className="container mx-auto px-4 py-6">
+        {/* Stats Overview */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+          <div className="glass-card p-5">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-slate-400 text-sm">Total Messages</p>
+                <h3 className="text-2xl font-bold text-white mt-1">{messages.length}</h3>
+              </div>
+              <div className="p-3 rounded-lg bg-indigo-900/50">
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-indigo-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
+                </svg>
+              </div>
+            </div>
+            <div className="mt-4 flex items-center text-xs">
+              <span className="text-green-400 flex items-center">
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <polyline points="22 7 13.5 15.5 8.5 10.5 2 17"></polyline>
+                  <polyline points="16 7 22 7 22 13"></polyline>
+                </svg>
+                12% increase
+              </span>
+              <span className="text-slate-400 ml-2">from last week</span>
+            </div>
+          </div>
+          
+          <div className="glass-card p-5">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-slate-400 text-sm">WhatsApp</p>
+                <h3 className="text-2xl font-bold text-white mt-1">
+                  {messages.filter(m => m.source === 'whatsapp').length}
+                </h3>
+              </div>
+              <div className="p-3 rounded-lg bg-green-900/50">
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-green-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M3 18v-6a9 9 0 0 1 18 0v6"></path>
+                  <path d="M21 19a2 2 0 0 1-2 2h-1a2 2 0 0 1-2-2v-3a2 2 0 0 1 2-2h3zM3 19a2 2 0 0 0 2 2h1a2 2 0 0 0 2-2v-3a2 2 0 0 0-2-2H3z"></path>
+                </svg>
+              </div>
+            </div>
+            <div className="mt-4 flex items-center text-xs">
+              <span className="text-green-400 flex items-center">
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <polyline points="22 7 13.5 15.5 8.5 10.5 2 17"></polyline>
+                  <polyline points="16 7 22 7 22 13"></polyline>
+                </svg>
+                8% increase
+              </span>
+              <span className="text-slate-400 ml-2">from last week</span>
+            </div>
+          </div>
+          
+          <div className="glass-card p-5">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-slate-400 text-sm">Telegram</p>
+                <h3 className="text-2xl font-bold text-white mt-1">
+                  {messages.filter(m => m.source === 'telegram').length}
+                </h3>
+              </div>
+              <div className="p-3 rounded-lg bg-blue-900/50">
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-blue-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <line x1="22" y1="2" x2="11" y2="13"></line>
+                  <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
+                </svg>
+              </div>
+            </div>
+            <div className="mt-4 flex items-center text-xs">
+              <span className="text-green-400 flex items-center">
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <polyline points="22 7 13.5 15.5 8.5 10.5 2 17"></polyline>
+                  <polyline points="16 7 22 7 22 13"></polyline>
+                </svg>
+                15% increase
+              </span>
+              <span className="text-slate-400 ml-2">from last week</span>
+            </div>
+          </div>
+          
+          <div className="glass-card p-5">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-slate-400 text-sm">Starred</p>
+                <h3 className="text-2xl font-bold text-white mt-1">
+                  {messages.filter(m => m.starred).length}
+                </h3>
+              </div>
+              <div className="p-3 rounded-lg bg-yellow-900/50">
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-yellow-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon>
+                </svg>
+              </div>
+            </div>
+            <div className="mt-4 flex items-center text-xs">
+              <span className="text-green-400 flex items-center">
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <polyline points="22 7 13.5 15.5 8.5 10.5 2 17"></polyline>
+                  <polyline points="16 7 22 7 22 13"></polyline>
+                </svg>
+                5% increase
+              </span>
+              <span className="text-slate-400 ml-2">from last week</span>
+            </div>
           </div>
         </div>
         
-        {activeTab === 'messages' ? (
-          <>
-            {isAddMessageOpen ? (
-              <div className="glass-card p-6 mb-6 shadow-md fade-in">
-                <div className="flex justify-between items-center mb-4">
-                  <h2 className="text-xl font-semibold gradient-text">Add New Message</h2>
-                  <button 
-                    onClick={() => setIsAddMessageOpen(false)}
-                    className="text-gray-500 hover:text-gray-700 transition-colors p-1 rounded-full hover:bg-gray-100"
-                    aria-label="Close form"
+        {/* Main Content */}
+        <div className="glass-card p-6 mb-8">
+          <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-6">
+            <h2 className="text-xl font-bold text-white mb-4 md:mb-0">Messages</h2>
+            <div className="flex space-x-2">
+              <button
+                className={`nav-tab ${activeTab === 'messages' ? 'nav-tab-active' : 'nav-tab-inactive'}`}
+                onClick={() => setActiveTab('messages')}
+              >
+                Messages
+              </button>
+              <button
+                className={`nav-tab ${activeTab === 'stats' ? 'nav-tab-active' : 'nav-tab-inactive'}`}
+                onClick={() => setActiveTab('stats')}
+              >
+                Statistics
+              </button>
+              <button
+                className={`nav-tab ${activeTab === 'setup' ? 'nav-tab-active' : 'nav-tab-inactive'}`}
+                onClick={() => setActiveTab('setup')}
+              >
+                Setup
+              </button>
+            </div>
+          </div>
+          
+          {activeTab === 'messages' ? (
+            <>
+              {isAddMessageOpen ? (
+                <div className="glass-card p-6 mb-6 fade-in">
+                  <div className="flex justify-between items-center mb-4">
+                    <h3 className="text-lg font-semibold gradient-text">Add New Message</h3>
+                    <button 
+                      onClick={() => setIsAddMessageOpen(false)}
+                      className="text-slate-400 hover:text-slate-200 transition-colors p-1 rounded-full hover:bg-slate-700"
+                      aria-label="Close form"
+                    >
+                      <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <line x1="18" y1="6" x2="6" y2="18"></line>
+                        <line x1="6" y1="6" x2="18" y2="18"></line>
+                      </svg>
+                    </button>
+                  </div>
+                  <AddMessageForm onMessageAdded={handleMessageAdded} />
+                </div>
+              ) : null}
+              
+              <div className="mb-6 bg-slate-800 rounded-xl p-4 shadow-sm border border-slate-700 slide-up">
+                <SearchFilters 
+                  searchTerm={searchTerm}
+                  setSearchTerm={setSearchTerm}
+                  selectedSource={selectedSource}
+                  setSelectedSource={setSelectedSource}
+                  selectedType={selectedType}
+                  setSelectedType={setSelectedType}
+                  selectedCategory={selectedCategory}
+                  setSelectedCategory={setSelectedCategory}
+                  starredFilter={starredFilter}
+                  setStarredFilter={setStarredFilter}
+                  onSearch={applySearch}
+                  onReset={resetFilters}
+                />
+              </div>
+              
+              {error && (
+                <div className="bg-red-900/50 border-l-4 border-red-500 p-4 mb-6 rounded-md">
+                  <div className="flex">
+                    <div className="flex-shrink-0">
+                      <svg className="h-5 w-5 text-red-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+                        <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+                      </svg>
+                    </div>
+                    <div className="ml-3">
+                      <p className="text-sm text-red-300">{error}</p>
+                    </div>
+                  </div>
+                </div>
+              )}
+              
+              {isLoading ? (
+                <div className="flex justify-center items-center py-12">
+                  <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-indigo-500"></div>
+                </div>
+              ) : messages.length === 0 ? (
+                <div className="text-center py-12 bg-slate-800/50 rounded-xl border border-slate-700">
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-16 w-16 mx-auto text-slate-500 mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4" />
+                  </svg>
+                  <h3 className="text-lg font-medium text-white mb-2">No messages found</h3>
+                  <p className="text-slate-400 mb-6">Try adjusting your search filters or add a new message.</p>
+                  <button
+                    onClick={() => setIsAddMessageOpen(true)}
+                    className="btn btn-primary"
                   >
-                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                      <line x1="18" y1="6" x2="6" y2="18"></line>
-                      <line x1="6" y1="6" x2="18" y2="18"></line>
-                    </svg>
+                    Add Your First Message
                   </button>
                 </div>
-                <AddMessageForm onMessageAdded={handleMessageAdded} />
-              </div>
-            ) : (
-              <button
-                className="btn btn-primary w-full mb-6 py-3 group slide-up"
-                onClick={() => setIsAddMessageOpen(true)}
-              >
-                <svg className="mr-2 group-hover:animate-pulse" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <line x1="12" y1="5" x2="12" y2="19"></line>
-                  <line x1="5" y1="12" x2="19" y2="12"></line>
-                </svg>
-                Add New Message
-              </button>
-            )}
-            
-            <div className="mb-6 bg-white rounded-xl p-4 shadow-sm border border-gray-100 slide-up">
-              <SearchFilters 
-                searchTerm={searchTerm}
-                setSearchTerm={setSearchTerm}
-                selectedSource={selectedSource}
-                setSelectedSource={setSelectedSource}
-                selectedType={selectedType}
-                setSelectedType={setSelectedType}
-                selectedCategory={selectedCategory}
-                setSelectedCategory={setSelectedCategory}
-                starredFilter={starredFilter}
-                setStarredFilter={setStarredFilter}
-                onSearch={applySearch}
-                onReset={resetFilters}
+              ) : (
+                <div className="dashboard-grid">
+                  {messages.map((message) => (
+                    <div key={message.id} className="card-hover fade-in">
+                      <MessageCard
+                        message={message}
+                        onUpdate={fetchMessages}
+                      />
+                    </div>
+                  ))}
+                </div>
+              )}
+            </>
+          ) : activeTab === 'stats' ? (
+            <div className="fade-in">
+              <MessageStats />
+            </div>
+          ) : (
+            <div className="fade-in">
+              <IntegrationGuide
+                whatsappLink={whatsappLink}
+                telegramLink={telegramLink}
+                onSync={handleSync}
               />
             </div>
-            
-            {error && (
-              <div className="bg-red-50 border-l-4 border-red-500 p-4 mb-6 rounded-md">
-                <div className="flex">
-                  <div className="flex-shrink-0">
-                    <svg className="h-5 w-5 text-red-500" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
-                      <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
-                    </svg>
-                  </div>
-                  <div className="ml-3">
-                    <p className="text-sm text-red-700">{error}</p>
-                  </div>
-                </div>
-              </div>
-            )}
-            
-            {isLoading ? (
-              <div className="flex justify-center items-center py-12">
-                <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-indigo-500"></div>
-              </div>
-            ) : messages.length === 0 ? (
-              <div className="text-center py-12 bg-gray-50 rounded-xl border border-gray-200">
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-16 w-16 mx-auto text-gray-400 mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4" />
-                </svg>
-                <h3 className="text-lg font-medium text-gray-900 mb-2">No messages found</h3>
-                <p className="text-gray-500 mb-6">Try adjusting your search filters or add a new message.</p>
-                <button
-                  onClick={() => setIsAddMessageOpen(true)}
-                  className="btn btn-primary"
-                >
-                  Add Your First Message
-                </button>
-              </div>
-            ) : (
-              <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
-                {messages.map((message) => (
-                  <div key={message.id} className="card-hover fade-in">
-                    <MessageCard
-                      message={message}
-                      onUpdate={fetchMessages}
-                    />
-                  </div>
-                ))}
-              </div>
-            )}
-            
-            {isSyncing && (
-              <div className="fixed bottom-4 right-4 bg-indigo-600 text-white px-4 py-2 rounded-lg shadow-lg flex items-center">
-                <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                </svg>
-                Syncing with Supabase...
-              </div>
-            )}
-          </>
-        ) : activeTab === 'stats' ? (
-          <div className="glass-card p-6 fade-in">
-            <MessageStats />
-          </div>
-        ) : (
-          <div className="glass-card p-6 fade-in">
-            <IntegrationGuide
-              whatsappLink={whatsappLink}
-              telegramLink={telegramLink}
-              onSync={handleSync}
-            />
-          </div>
-        )}
+          )}
+        </div>
+        
+        {/* Recent Webhook Messages */}
+        <WebhookMessages />
       </div>
       
-      <footer className="bg-gray-50 border-t border-gray-200 py-6 mt-auto">
+      <footer className="bg-slate-800 border-t border-slate-700 py-6 mt-auto">
         <div className="container mx-auto px-4">
           <div className="flex flex-col md:flex-row justify-between items-center">
-            <p className="text-gray-600 text-sm mb-4 md:mb-0">
+            <p className="text-slate-400 text-sm mb-4 md:mb-0">
               &copy; {new Date().getFullYear()} Data Organizer. All rights reserved.
             </p>
             <div className="flex space-x-4">
-              <a href="#" className="text-gray-500 hover:text-indigo-600 transition-colors">
+              <a href="#" className="text-slate-400 hover:text-indigo-400 transition-colors">
                 Privacy Policy
               </a>
-              <a href="#" className="text-gray-500 hover:text-indigo-600 transition-colors">
+              <a href="#" className="text-slate-400 hover:text-indigo-400 transition-colors">
                 Terms of Service
               </a>
-              <a href="#" className="text-gray-500 hover:text-indigo-600 transition-colors">
+              <a href="#" className="text-slate-400 hover:text-indigo-400 transition-colors">
                 Contact
               </a>
             </div>

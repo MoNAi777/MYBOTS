@@ -183,8 +183,8 @@ export default function MessageCard({ message, onUpdate }: MessageCardProps) {
         <div className="flex justify-between items-start mb-3">
           <div className="flex items-center">
             {getSourceIcon()}
-            <span className="text-sm font-medium text-gray-700 ml-2">{message.source}</span>
-            <span className="ml-2 px-2 py-0.5 text-xs rounded-full bg-gray-100 text-gray-600">
+            <span className="text-sm font-medium text-slate-300 ml-2">{message.source}</span>
+            <span className="ml-2 px-2 py-0.5 text-xs rounded-full bg-slate-700 text-slate-300">
               {message.type}
             </span>
           </div>
@@ -192,7 +192,7 @@ export default function MessageCard({ message, onUpdate }: MessageCardProps) {
             <button
               onClick={handleToggleStar}
               className={`p-1.5 rounded-full transition-colors ${
-                editedStarred ? 'text-yellow-500 hover:text-yellow-600' : 'text-gray-400 hover:text-gray-500'
+                editedStarred ? 'text-yellow-500 hover:text-yellow-600' : 'text-slate-500 hover:text-slate-400'
               }`}
               aria-label={editedStarred ? "Unstar message" : "Star message"}
             >
@@ -203,7 +203,7 @@ export default function MessageCard({ message, onUpdate }: MessageCardProps) {
             {!isEditing ? (
               <button
                 onClick={() => setIsEditing(true)}
-                className="p-1.5 rounded-full text-gray-400 hover:text-gray-500 transition-colors"
+                className="p-1.5 rounded-full text-slate-500 hover:text-slate-300 transition-colors"
                 aria-label="Edit message"
               >
                 <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -214,7 +214,7 @@ export default function MessageCard({ message, onUpdate }: MessageCardProps) {
             ) : (
               <button
                 onClick={handleSave}
-                className="p-1.5 rounded-full text-green-500 hover:text-green-600 transition-colors"
+                className="p-1.5 rounded-full text-green-500 hover:text-green-400 transition-colors"
                 aria-label="Save changes"
                 disabled={isUpdating}
               >
@@ -227,7 +227,7 @@ export default function MessageCard({ message, onUpdate }: MessageCardProps) {
             )}
             <button
               onClick={() => setIsDeleting(true)}
-              className="p-1.5 rounded-full text-gray-400 hover:text-red-500 transition-colors"
+              className="p-1.5 rounded-full text-slate-500 hover:text-red-400 transition-colors"
               aria-label="Delete message"
             >
               <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -241,7 +241,7 @@ export default function MessageCard({ message, onUpdate }: MessageCardProps) {
         </div>
         
         <div className="mb-3">
-          <div className="text-gray-800 break-words">
+          <div className="text-slate-200 break-words">
             {message.content}
           </div>
           {message.type === 'link' && message.content && (
@@ -249,7 +249,7 @@ export default function MessageCard({ message, onUpdate }: MessageCardProps) {
               href={message.content} 
               target="_blank" 
               rel="noopener noreferrer" 
-              className="mt-2 inline-flex items-center text-sm text-indigo-600 hover:text-indigo-700 transition-colors"
+              className="mt-2 inline-flex items-center text-sm text-indigo-400 hover:text-indigo-300 transition-colors"
             >
               <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path>
@@ -265,7 +265,7 @@ export default function MessageCard({ message, onUpdate }: MessageCardProps) {
           {isEditing ? (
             <>
               <div className="w-full mb-3">
-                <label htmlFor="category" className="block text-sm font-medium text-gray-700 mb-1">Category</label>
+                <label htmlFor="category" className="block text-sm font-medium text-slate-300 mb-1">Category</label>
                 <select
                   id="category"
                   value={editedCategory}
@@ -279,7 +279,7 @@ export default function MessageCard({ message, onUpdate }: MessageCardProps) {
                 </select>
               </div>
               <div className="w-full">
-                <label htmlFor="tags" className="block text-sm font-medium text-gray-700 mb-1">Tags (comma separated)</label>
+                <label htmlFor="tags" className="block text-sm font-medium text-slate-300 mb-1">Tags (comma separated)</label>
                 <input
                   id="tags"
                   type="text"
@@ -293,12 +293,12 @@ export default function MessageCard({ message, onUpdate }: MessageCardProps) {
           ) : (
             <>
               {message.category && (
-                <span className="px-2.5 py-1 rounded-full text-xs font-medium bg-indigo-50 text-indigo-700">
+                <span className="px-2.5 py-1 rounded-full text-xs font-medium bg-indigo-900/50 text-indigo-300 border border-indigo-800/50">
                   {message.category}
                 </span>
               )}
               {message.tags && message.tags.map((tag, index) => (
-                <span key={index} className="px-2.5 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-700">
+                <span key={index} className="px-2.5 py-1 rounded-full text-xs font-medium bg-slate-700 text-slate-300">
                   {tag}
                 </span>
               ))}
@@ -306,7 +306,7 @@ export default function MessageCard({ message, onUpdate }: MessageCardProps) {
           )}
         </div>
         
-        <div className="mt-4 pt-3 border-t border-gray-100 flex justify-between items-center text-xs text-gray-500">
+        <div className="mt-4 pt-3 border-t border-slate-700 flex justify-between items-center text-xs text-slate-500">
           <div>
             {formatDate(message.createdAt)}
           </div>
@@ -319,8 +319,8 @@ export default function MessageCard({ message, onUpdate }: MessageCardProps) {
       </div>
       
       {isDeleting && (
-        <div className="absolute inset-0 bg-white/95 backdrop-blur-sm flex flex-col items-center justify-center p-6 z-10 fade-in">
-          <p className="text-gray-800 font-medium mb-4 text-center">Are you sure you want to delete this message?</p>
+        <div className="absolute inset-0 bg-slate-900/95 backdrop-blur-sm flex flex-col items-center justify-center p-6 z-10 fade-in">
+          <p className="text-slate-200 font-medium mb-4 text-center">Are you sure you want to delete this message?</p>
           <div className="flex space-x-3">
             <button
               onClick={() => setIsDeleting(false)}
@@ -331,7 +331,7 @@ export default function MessageCard({ message, onUpdate }: MessageCardProps) {
             </button>
             <button
               onClick={handleDelete}
-              className="btn bg-red-500 text-white hover:bg-red-600 focus:ring-red-500"
+              className="btn bg-red-600 text-white hover:bg-red-700 focus:ring-red-500"
               disabled={isUpdating}
             >
               {isUpdating ? (
