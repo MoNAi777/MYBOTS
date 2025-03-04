@@ -13,7 +13,13 @@ const webhookMessages: Array<{
 
 export async function GET(request: NextRequest) {
   // This endpoint is used for testing the API
+  console.log('GET request received at /api/receive');
+  console.log('Request headers:', JSON.stringify(Object.fromEntries(request.headers.entries())));
+  
   const searchParams = request.nextUrl.searchParams;
+  const source = searchParams.get('source');
+  console.log('Source from query parameters:', source);
+  
   const showMessages = searchParams.get('showMessages') === 'true';
   
   if (showMessages) {
@@ -24,14 +30,22 @@ export async function GET(request: NextRequest) {
     });
   }
   
-  return NextResponse.json({ message: 'Message receiver API is working' });
+  return NextResponse.json({ 
+    message: 'Message receiver API is working',
+    timestamp: new Date().toISOString(),
+    source: source || 'not specified'
+  });
 }
 
 export async function POST(request: NextRequest) {
   try {
+    console.log('Webhook received - POST request to /api/receive');
+    console.log('Request headers:', JSON.stringify(Object.fromEntries(request.headers.entries())));
+    
     // Get the source from the query parameters
     const searchParams = request.nextUrl.searchParams;
     const source = searchParams.get('source') as 'whatsapp' | 'telegram' | 'sms';
+    console.log('Source from query parameters:', source);
     
     // Validate the source
     if (!source || (source !== 'whatsapp' && source !== 'telegram' && source !== 'sms')) {
