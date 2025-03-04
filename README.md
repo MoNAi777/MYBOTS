@@ -178,3 +178,35 @@ This project is licensed under the MIT License - see the LICENSE file for detail
 
 - Icons provided by various emoji sets
 - Built with Next.js and Tailwind CSS
+
+## Directory Structure
+
+- **src/** - Main application source code
+  - **app/** - Next.js application
+    - **api/** - API endpoints
+    - **components/** - React components
+    - **services/** - Service layer for business logic
+- **docs/** - Documentation for the application
+- **setup-scripts/** - Scripts for setting up integrations
+- **test-scripts/** - Scripts for testing integrations
+- **public/** - Static assets
+
+## Available Scripts
+
+### Setup Scripts
+
+- **setup-scripts/setup-telegram.js** - Sets up the Telegram webhook for your bot
+- **setup-scripts/setup-whatsapp.js** - Provides instructions for setting up the WhatsApp Sandbox webhook
+
+### Test Scripts
+
+- **test-scripts/check-whatsapp-sandbox.js** - Checks the status of your WhatsApp Sandbox
+- **test-scripts/send-whatsapp-test.js** - Sends a test message to a WhatsApp number
+- **test-scripts/test-twilio-sandbox.js** - Tests the Twilio WhatsApp Sandbox configuration
+- **test-scripts/test-webhook-endpoint.js** - Tests all webhook endpoints
+- **test-scripts/test-with-your-number.js** - Interactive tool for testing WhatsApp integration
+
+## Documentation
+
+- **docs/SETUP-SUMMARY.md** - A summary of the setup process for all integrations
+- **docs/WHATSAPP-SETUP-GUIDE.md** - A comprehensive guide for setting up and testing the WhatsApp Sandbox integration
