@@ -51,7 +51,7 @@ export default function Home() {
   const loadMessages = async () => {
     try {
       setIsLoading(true);
-      const allMessages = await hybridDbService.getAllMessages();
+      const allMessages = await hybridDbService.getMessages();
       setMessages(allMessages);
       setError(null);
     } catch (err) {
@@ -72,7 +72,7 @@ export default function Home() {
   const handleSync = async () => {
     try {
       setIsSyncing(true);
-      await hybridDbService.syncWithSupabase();
+      await hybridDbService.syncDatabases();
       loadMessages();
     } catch (err) {
       console.error('Error syncing with Supabase:', err);
@@ -91,7 +91,7 @@ export default function Home() {
   const handleSearchReset = () => {
     loadMessages();
   };
-  
+
   // Fetch messages
   const fetchMessages = async () => {
     await loadMessages();
@@ -101,7 +101,7 @@ export default function Home() {
   const addNewMessage = () => {
     setIsAddMessageOpen(true);
   };
-  
+
   // Toggle star
   const toggleStar = async (id: number, currentStarred: boolean) => {
     try {
@@ -123,7 +123,7 @@ export default function Home() {
       setError('Failed to delete message. Please try again.');
     }
   };
-  
+
   // Reset filters
   const resetFilters = () => {
     setSearchTerm('');
@@ -133,7 +133,7 @@ export default function Home() {
     setStarredFilter('All Items');
     loadMessages();
   };
-  
+
   // Apply search
   const applySearch = () => {
     fetchMessages();
@@ -147,9 +147,9 @@ export default function Home() {
           <div className="flex items-center">
             <h1 className="text-xl font-bold text-white">Dashboard</h1>
             <span className="ml-3 px-2 py-1 text-xs rounded-full bg-indigo-900/50 text-indigo-300 border border-indigo-700/50">v0.1</span>
-          </div>
+        </div>
           <div className="flex items-center space-x-4">
-            <button 
+            <button
               onClick={handleSync} 
               className="btn btn-secondary text-sm flex items-center"
               disabled={isSyncing}
@@ -168,7 +168,7 @@ export default function Home() {
                     <polyline points="1 4 1 10 7 10"></polyline>
                     <polyline points="23 20 23 14 17 14"></polyline>
                     <path d="M20.49 9A9 9 0 0 0 5.64 5.64L1 10m22 4l-4.64 4.36A9 9 0 0 1 3.51 15"></path>
-                  </svg>
+              </svg>
                   Sync
                 </>
               )}
@@ -311,35 +311,35 @@ export default function Home() {
                 onClick={() => setActiveTab('stats')}
               >
                 Statistics
-              </button>
-              <button
+            </button>
+            <button
                 className={`nav-tab ${activeTab === 'setup' ? 'nav-tab-active' : 'nav-tab-inactive'}`}
-                onClick={() => setActiveTab('setup')}
-              >
-                Setup
-              </button>
-            </div>
+              onClick={() => setActiveTab('setup')}
+            >
+              Setup
+            </button>
           </div>
-          
-          {activeTab === 'messages' ? (
-            <>
-              {isAddMessageOpen ? (
+        </div>
+        
+        {activeTab === 'messages' ? (
+          <>
+            {isAddMessageOpen ? (
                 <div className="glass-card p-6 mb-6 fade-in">
-                  <div className="flex justify-between items-center mb-4">
+                <div className="flex justify-between items-center mb-4">
                     <h3 className="text-lg font-semibold gradient-text">Add New Message</h3>
-                    <button 
-                      onClick={() => setIsAddMessageOpen(false)}
+                  <button 
+                    onClick={() => setIsAddMessageOpen(false)}
                       className="text-slate-400 hover:text-slate-200 transition-colors p-1 rounded-full hover:bg-slate-700"
                       aria-label="Close form"
-                    >
-                      <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                        <line x1="18" y1="6" x2="6" y2="18"></line>
-                        <line x1="6" y1="6" x2="18" y2="18"></line>
-                      </svg>
-                    </button>
-                  </div>
-                  <AddMessageForm onMessageAdded={handleMessageAdded} />
+                  >
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <line x1="18" y1="6" x2="6" y2="18"></line>
+                      <line x1="6" y1="6" x2="18" y2="18"></line>
+                    </svg>
+                  </button>
                 </div>
+                <AddMessageForm onMessageAdded={handleMessageAdded} />
+              </div>
               ) : null}
               
               <div className="mb-6 bg-slate-800 rounded-xl p-4 shadow-sm border border-slate-700 slide-up">
@@ -357,7 +357,7 @@ export default function Home() {
                   onSearch={applySearch}
                   onReset={resetFilters}
                 />
-              </div>
+            </div>
               
               {error && (
                 <div className="bg-red-900/50 border-l-4 border-red-500 p-4 mb-6 rounded-md">
@@ -382,7 +382,7 @@ export default function Home() {
                 <div className="text-center py-12 bg-slate-800/50 rounded-xl border border-slate-700">
                   <svg xmlns="http://www.w3.org/2000/svg" className="h-16 w-16 mx-auto text-slate-500 mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4" />
-                  </svg>
+                    </svg>
                   <h3 className="text-lg font-medium text-white mb-2">No messages found</h3>
                   <p className="text-slate-400 mb-6">Try adjusting your search filters or add a new message.</p>
                   <button
@@ -396,18 +396,18 @@ export default function Home() {
                 <div className="dashboard-grid">
                   {messages.map((message) => (
                     <div key={message.id} className="card-hover fade-in">
-                      <MessageCard
-                        message={message}
+                    <MessageCard
+                      message={message}
                         onUpdate={fetchMessages}
-                      />
+                    />
                     </div>
                   ))}
                 </div>
               )}
-            </>
-          ) : activeTab === 'stats' ? (
+          </>
+        ) : activeTab === 'stats' ? (
             <div className="fade-in">
-              <MessageStats />
+          <MessageStats />
             </div>
           ) : (
             <div className="fade-in">
@@ -417,7 +417,7 @@ export default function Home() {
                 onSync={handleSync}
               />
             </div>
-          )}
+        )}
         </div>
         
         {/* Recent Webhook Messages */}
@@ -441,7 +441,7 @@ export default function Home() {
                 Contact
               </a>
             </div>
-          </div>
+        </div>
         </div>
       </footer>
     </main>
