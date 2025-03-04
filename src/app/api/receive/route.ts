@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import messageReceiverService from '../../services/messageReceiver';
+import supabaseDbService from '../../services/supabaseDb';
 
 // In-memory storage for messages received via webhook
 // This is a temporary solution until we implement a proper server-side database
@@ -40,6 +41,8 @@ export async function POST(request: NextRequest) {
       );
     }
     
+    console.log(`Received webhook from ${source}`);
+    
     // Parse the request body - handle both form data (Twilio) and JSON
     let content = '';
     let metadata: Record<string, any> = {};
@@ -50,11 +53,13 @@ export async function POST(request: NextRequest) {
       // Handle JSON data (our custom format or Telegram)
       try {
         const body = await request.json();
+        console.log('Received JSON body:', JSON.stringify(body).substring(0, 200) + '...');
         
         if (source === 'telegram') {
           // Handle Telegram webhook format
           // Telegram sends updates in a specific format
           if (!body.message) {
+            console.log('Invalid Telegram webhook data. No message found.');
             return NextResponse.json(
               { error: 'Invalid Telegram webhook data. No message found.' },
               { status: 400 }
@@ -115,6 +120,7 @@ export async function POST(request: NextRequest) {
           metadata = body.metadata || {};
         }
       } catch (error) {
+        console.error('Error parsing JSON body:', error);
         return NextResponse.json(
           { error: 'Invalid JSON body', details: (error as Error).message },
           { status: 400 }
@@ -124,6 +130,7 @@ export async function POST(request: NextRequest) {
       // Handle form data (Twilio format)
       try {
         const formData = await request.formData();
+        console.log('Received form data:', Object.fromEntries(formData.entries()));
         
         // For WhatsApp, Twilio sends the message in the 'Body' field
         content = formData.get('Body')?.toString() || '';
@@ -158,17 +165,21 @@ export async function POST(request: NextRequest) {
           metadata.media = mediaItems;
         }
       } catch (error) {
+        console.error('Error parsing form data:', error);
         return NextResponse.json(
           { error: 'Failed to parse form data', details: (error as Error).message },
           { status: 400 }
         );
       }
     } else {
+      console.log('Unsupported content type:', contentType);
       return NextResponse.json(
         { error: 'Unsupported content type. Use application/json or application/x-www-form-urlencoded' },
         { status: 415 }
       );
     }
+    
+    console.log(`Processing message: "${content.substring(0, 50)}${content.length > 50 ? '...' : ''}"`);
     
     // Store the message in our in-memory array
     webhookMessages.push({
@@ -186,16 +197,33 @@ export async function POST(request: NextRequest) {
     // Try to process the message with the service
     let id: number | undefined;
     try {
-      // Process the message
-      id = await messageReceiverService.processIncomingMessage(
+      // First try with supabaseDbService directly
+      id = await supabaseDbService.addMessage({
         content,
         source,
+        type: 'text', // Default to text, AI service will refine this later
+        createdAt: new Date(),
         metadata
-      );
-    } catch (error) {
-      console.error('Error processing message:', error);
-      // We'll continue even if there's an error with IndexedDB
-      // The message is still stored in our in-memory array
+      });
+      
+      console.log('Message saved to Supabase with ID:', id);
+    } catch (supabaseError) {
+      console.error('Error saving to Supabase directly:', supabaseError);
+      
+      // Fallback to messageReceiverService
+      try {
+        console.log('Trying with messageReceiverService as fallback...');
+        id = await messageReceiverService.processIncomingMessage(
+          content,
+          source,
+          metadata
+        );
+        console.log('Message processed with messageReceiverService, ID:', id);
+      } catch (error) {
+        console.error('Error processing message with messageReceiverService:', error);
+        // We'll continue even if there's an error
+        // The message is still stored in our in-memory array
+      }
     }
     
     // For Telegram, we need to return a 200 OK response

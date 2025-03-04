@@ -1,14 +1,9 @@
 'use client';
 
 import { useState } from 'react';
-import { createClient } from '@supabase/supabase-js';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-
-// Initialize Supabase client
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
-const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
-const supabase = createClient(supabaseUrl, supabaseKey);
+import supabaseDbService from '../services/supabaseDb';
 
 export default function AddMessage() {
   const [content, setContent] = useState('');
@@ -39,25 +34,27 @@ export default function AddMessage() {
         .map(tag => tag.trim())
         .filter(tag => tag.length > 0);
       
-      // Insert message into Supabase
-      const { data, error } = await supabase
-        .from('Message')
-        .insert([
-          {
-            content,
-            source,
-            type,
-            category: category || null,
-            tags: tagsArray.length > 0 ? tagsArray : null,
-            createdAt: new Date().toISOString(),
-            starred: false,
-            metadata: {}
-          }
-        ])
-        .select();
+      console.log('Submitting message:', {
+        content,
+        source,
+        type,
+        category: category || null,
+        tags: tagsArray,
+      });
       
-      if (error) throw error;
+      // Insert message using the service
+      const id = await supabaseDbService.addMessage({
+        content,
+        source: source as 'whatsapp' | 'telegram',
+        type: type as 'text' | 'link' | 'video' | 'image' | 'file' | 'app' | 'other',
+        category: category || undefined,
+        tags: tagsArray.length > 0 ? tagsArray : undefined,
+        createdAt: new Date(),
+        starred: false,
+        metadata: {}
+      });
       
+      console.log('Message added successfully with ID:', id);
       setSuccess(true);
       
       // Reset form
@@ -72,7 +69,7 @@ export default function AddMessage() {
       
     } catch (err: any) {
       console.error('Error adding message:', err);
-      setError(err.message);
+      setError(err.message || 'Failed to add message. Please try again.');
     } finally {
       setIsSubmitting(false);
     }

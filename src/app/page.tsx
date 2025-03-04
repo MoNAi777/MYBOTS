@@ -13,6 +13,7 @@ import WebhookMessages from './components/WebhookMessages';
 import hybridDbService from './services/hybridDb';
 import messageReceiverService from './services/messageReceiver';
 import { Message } from './services/db';
+import supabaseDbService from './services/supabaseDb';
 
 // Initialize Supabase client
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
@@ -98,43 +99,53 @@ export default function Home() {
   const fetchMessages = async () => {
     try {
       setIsLoading(true);
+      setError(null);
       
-      let query = supabase
-        .from('Message')
-        .select('*')
-        .order('createdAt', { ascending: false });
+      console.log('Fetching messages with filters:', {
+        source: selectedSource !== 'All Sources' ? selectedSource : undefined,
+        type: selectedType !== 'All Types' ? selectedType : undefined,
+        category: selectedCategory !== 'All Categories' ? selectedCategory : undefined,
+        starred: starredFilter === 'Starred' ? true : undefined,
+        searchTerm
+      });
       
-      // Apply filters
+      // Prepare options for the service
+      const options: any = {};
+      
       if (selectedSource !== 'All Sources') {
-        query = query.eq('source', selectedSource);
+        options.source = selectedSource.toLowerCase();
       }
       
       if (selectedType !== 'All Types') {
-        query = query.eq('type', selectedType);
+        options.type = selectedType.toLowerCase();
       }
       
       if (selectedCategory !== 'All Categories') {
-        query = query.eq('category', selectedCategory);
+        options.category = selectedCategory;
       }
       
       if (starredFilter === 'Starred') {
-        query = query.eq('starred', true);
+        options.starred = true;
       }
       
+      // Get messages from the service
+      let result = await supabaseDbService.getMessages(options);
+      
+      // Apply search filter if needed (client-side filtering)
       if (searchTerm) {
-        query = query.ilike('content', `%${searchTerm}%`);
+        const lowerSearchTerm = searchTerm.toLowerCase();
+        result = result.filter(msg => 
+          msg.content.toLowerCase().includes(lowerSearchTerm) ||
+          (msg.category && msg.category.toLowerCase().includes(lowerSearchTerm)) ||
+          (msg.tags && msg.tags.some(tag => tag.toLowerCase().includes(lowerSearchTerm)))
+        );
       }
       
-      const { data, error } = await query;
-      
-      if (error) {
-        throw error;
-      }
-      
-      setMessages(data || []);
+      console.log(`Found ${result.length} messages`);
+      setMessages(result);
     } catch (err: any) {
       console.error('Error fetching messages:', err);
-      setError(err.message);
+      setError(err.message || 'Failed to fetch messages. Please try again.');
     } finally {
       setIsLoading(false);
     }
@@ -148,12 +159,7 @@ export default function Home() {
   // Handle message starring
   const toggleStar = async (id: number, currentStarred: boolean) => {
     try {
-      const { error } = await supabase
-        .from('Message')
-        .update({ starred: !currentStarred })
-        .eq('id', id);
-        
-      if (error) throw error;
+      await supabaseDbService.updateMessage(id, { starred: !currentStarred });
       
       // Update local state
       setMessages(messages.map(msg => 
@@ -161,7 +167,7 @@ export default function Home() {
       ));
     } catch (err: any) {
       console.error('Error updating star status:', err);
-      setError(err.message);
+      setError(err.message || 'Failed to update star status. Please try again.');
     }
   };
 
@@ -170,18 +176,13 @@ export default function Home() {
     if (!confirm('Are you sure you want to delete this message?')) return;
     
     try {
-      const { error } = await supabase
-        .from('Message')
-        .delete()
-        .eq('id', id);
-        
-      if (error) throw error;
+      await supabaseDbService.deleteMessage(id);
       
       // Update local state
       setMessages(messages.filter(msg => msg.id !== id));
     } catch (err: any) {
       console.error('Error deleting message:', err);
-      setError(err.message);
+      setError(err.message || 'Failed to delete message. Please try again.');
     }
   };
 
