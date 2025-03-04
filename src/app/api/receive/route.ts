@@ -11,19 +11,30 @@ const webhookMessages: Array<{
   timestamp: string;
 }> = [];
 
+// Debug log function with timestamp
+function debugLog(message: string, data?: any) {
+  const timestamp = new Date().toISOString();
+  console.log(`[${timestamp}] ${message}`);
+  if (data) {
+    console.log(`[${timestamp}] Data:`, typeof data === 'object' ? JSON.stringify(data, null, 2) : data);
+  }
+}
+
 export async function GET(request: NextRequest) {
   // This endpoint is used for testing the API
-  console.log('GET request received at /api/receive');
-  console.log('Request headers:', JSON.stringify(Object.fromEntries(request.headers.entries())));
+  debugLog('GET request received at /api/receive');
+  debugLog('Request URL:', request.url);
+  debugLog('Request headers:', Object.fromEntries(request.headers.entries()));
   
   const searchParams = request.nextUrl.searchParams;
   const source = searchParams.get('source');
-  console.log('Source from query parameters:', source);
+  debugLog('Source from query parameters:', source);
   
   const showMessages = searchParams.get('showMessages') === 'true';
   
   if (showMessages) {
     // Return the stored webhook messages
+    debugLog('Returning stored webhook messages', { count: webhookMessages.length });
     return NextResponse.json({ 
       message: 'Message receiver API is working',
       webhookMessages 
@@ -39,41 +50,44 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
-    console.log('Webhook received - POST request to /api/receive');
-    console.log('Request headers:', JSON.stringify(Object.fromEntries(request.headers.entries())));
+    debugLog('Webhook received - POST request to /api/receive');
+    debugLog('Request URL:', request.url);
+    debugLog('Request headers:', Object.fromEntries(request.headers.entries()));
     
     // Get the source from the query parameters
     const searchParams = request.nextUrl.searchParams;
     const source = searchParams.get('source') as 'whatsapp' | 'telegram' | 'sms';
-    console.log('Source from query parameters:', source);
+    debugLog('Source from query parameters:', source);
     
     // Validate the source
     if (!source || (source !== 'whatsapp' && source !== 'telegram' && source !== 'sms')) {
+      debugLog('Invalid source', { source });
       return NextResponse.json(
         { error: 'Invalid source. Must be "whatsapp", "telegram", or "sms"' },
         { status: 400 }
       );
     }
     
-    console.log(`Received webhook from ${source}`);
+    debugLog(`Received webhook from ${source}`);
     
     // Parse the request body - handle both form data (Twilio) and JSON
     let content = '';
     let metadata: Record<string, any> = {};
     
     const contentType = request.headers.get('content-type') || '';
+    debugLog('Content-Type:', contentType);
     
     if (contentType.includes('application/json')) {
       // Handle JSON data (our custom format or Telegram)
       try {
         const body = await request.json();
-        console.log('Received JSON body:', JSON.stringify(body).substring(0, 200) + '...');
+        debugLog('Received JSON body:', body);
         
         if (source === 'telegram') {
           // Handle Telegram webhook format
           // Telegram sends updates in a specific format
           if (!body.message) {
-            console.log('Invalid Telegram webhook data. No message found.');
+            debugLog('Invalid Telegram webhook data. No message found.');
             return NextResponse.json(
               { error: 'Invalid Telegram webhook data. No message found.' },
               { status: 400 }
@@ -124,6 +138,7 @@ export async function POST(request: NextRequest) {
         } else {
           // Handle our custom JSON format
           if (!body.content || typeof body.content !== 'string') {
+            debugLog('Invalid content in JSON body', { body });
             return NextResponse.json(
               { error: 'Invalid content. Must provide a content field with a string value' },
               { status: 400 }
@@ -134,7 +149,17 @@ export async function POST(request: NextRequest) {
           metadata = body.metadata || {};
         }
       } catch (error) {
-        console.error('Error parsing JSON body:', error);
+        debugLog('Error parsing JSON body:', (error as Error).message);
+        
+        // Try to get the raw body as text for debugging
+        try {
+          const clonedRequest = request.clone();
+          const rawBody = await clonedRequest.text();
+          debugLog('Raw request body:', rawBody);
+        } catch (e) {
+          debugLog('Could not get raw body:', (e as Error).message);
+        }
+        
         return NextResponse.json(
           { error: 'Invalid JSON body', details: (error as Error).message },
           { status: 400 }
@@ -144,12 +169,14 @@ export async function POST(request: NextRequest) {
       // Handle form data (Twilio format)
       try {
         const formData = await request.formData();
-        console.log('Received form data:', Object.fromEntries(formData.entries()));
+        const formDataEntries = Object.fromEntries(formData.entries());
+        debugLog('Received form data:', formDataEntries);
         
         // For WhatsApp, Twilio sends the message in the 'Body' field
         content = formData.get('Body')?.toString() || '';
         
         if (!content) {
+          debugLog('No message content found in form data');
           return NextResponse.json(
             { error: 'No message content found in the request' },
             { status: 400 }
@@ -164,6 +191,7 @@ export async function POST(request: NextRequest) {
           accountSid: formData.get('AccountSid')?.toString() || '',
           profileName: formData.get('ProfileName')?.toString() || '',
           timestamp: new Date().toISOString(),
+          allFormData: formDataEntries, // Store all form data for debugging
         };
         
         // If there are media attachments, add them to metadata
@@ -179,21 +207,41 @@ export async function POST(request: NextRequest) {
           metadata.media = mediaItems;
         }
       } catch (error) {
-        console.error('Error parsing form data:', error);
+        debugLog('Error parsing form data:', (error as Error).message);
+        
+        // Try to get the raw body as text for debugging
+        try {
+          const clonedRequest = request.clone();
+          const rawBody = await clonedRequest.text();
+          debugLog('Raw request body:', rawBody);
+        } catch (e) {
+          debugLog('Could not get raw body:', (e as Error).message);
+        }
+        
         return NextResponse.json(
           { error: 'Failed to parse form data', details: (error as Error).message },
           { status: 400 }
         );
       }
     } else {
-      console.log('Unsupported content type:', contentType);
+      debugLog('Unsupported content type:', contentType);
+      
+      // Try to get the raw body as text for debugging
+      try {
+        const clonedRequest = request.clone();
+        const rawBody = await clonedRequest.text();
+        debugLog('Raw request body:', rawBody);
+      } catch (e) {
+        debugLog('Could not get raw body:', (e as Error).message);
+      }
+      
       return NextResponse.json(
         { error: 'Unsupported content type. Use application/json or application/x-www-form-urlencoded' },
         { status: 415 }
       );
     }
     
-    console.log(`Processing message: "${content.substring(0, 50)}${content.length > 50 ? '...' : ''}"`);
+    debugLog(`Processing message: "${content.substring(0, 50)}${content.length > 50 ? '...' : ''}"`, { source, metadata });
     
     // Store the message in our in-memory array
     webhookMessages.push({
@@ -220,21 +268,21 @@ export async function POST(request: NextRequest) {
         metadata
       });
       
-      console.log('Message saved to Supabase with ID:', id);
+      debugLog('Message saved to Supabase with ID:', id);
     } catch (supabaseError) {
-      console.error('Error saving to Supabase directly:', supabaseError);
+      debugLog('Error saving to Supabase directly:', (supabaseError as Error).message);
       
       // Fallback to messageReceiverService
       try {
-        console.log('Trying with messageReceiverService as fallback...');
+        debugLog('Trying with messageReceiverService as fallback...');
         id = await messageReceiverService.processIncomingMessage(
           content,
           source,
           metadata
         );
-        console.log('Message processed with messageReceiverService, ID:', id);
+        debugLog('Message processed with messageReceiverService, ID:', id);
       } catch (error) {
-        console.error('Error processing message with messageReceiverService:', error);
+        debugLog('Error processing message with messageReceiverService:', (error as Error).message);
         // We'll continue even if there's an error
         // The message is still stored in our in-memory array
       }
@@ -253,7 +301,8 @@ export async function POST(request: NextRequest) {
       storedInMemory: true
     });
   } catch (error) {
-    console.error('Error processing message:', error);
+    debugLog('Error processing message:', (error as Error).message);
+    debugLog('Error stack:', (error as Error).stack);
     
     // Return error response
     return NextResponse.json(
