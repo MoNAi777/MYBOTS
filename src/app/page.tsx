@@ -1,6 +1,9 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { createClient } from '@supabase/supabase-js';
+import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import AddMessageForm from './components/AddMessageForm';
 import SearchFilters from './components/SearchFilters';
 import MessageCard from './components/MessageCard';
@@ -11,6 +14,11 @@ import hybridDbService from './services/hybridDb';
 import messageReceiverService from './services/messageReceiver';
 import { Message } from './services/db';
 
+// Initialize Supabase client
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
+const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
+const supabase = createClient(supabaseUrl, supabaseKey);
+
 export default function Home() {
   const [messages, setMessages] = useState<Message[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -19,6 +27,13 @@ export default function Home() {
   const [telegramLink, setTelegramLink] = useState('');
   const [isAddMessageOpen, setIsAddMessageOpen] = useState(false);
   const [isSyncing, setIsSyncing] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [selectedSource, setSelectedSource] = useState('All Sources');
+  const [selectedType, setSelectedType] = useState('All Types');
+  const [selectedCategory, setSelectedCategory] = useState('All Categories');
+  const [starredFilter, setStarredFilter] = useState('All Items');
+  const router = useRouter();
   
   // Load messages on component mount
   useEffect(() => {
@@ -78,7 +93,112 @@ export default function Home() {
   const handleSearchReset = () => {
     loadMessages();
   };
-  
+
+  // Fetch messages from Supabase
+  const fetchMessages = async () => {
+    try {
+      setIsLoading(true);
+      
+      let query = supabase
+        .from('Message')
+        .select('*')
+        .order('createdAt', { ascending: false });
+      
+      // Apply filters
+      if (selectedSource !== 'All Sources') {
+        query = query.eq('source', selectedSource);
+      }
+      
+      if (selectedType !== 'All Types') {
+        query = query.eq('type', selectedType);
+      }
+      
+      if (selectedCategory !== 'All Categories') {
+        query = query.eq('category', selectedCategory);
+      }
+      
+      if (starredFilter === 'Starred') {
+        query = query.eq('starred', true);
+      }
+      
+      if (searchTerm) {
+        query = query.ilike('content', `%${searchTerm}%`);
+      }
+      
+      const { data, error } = await query;
+      
+      if (error) {
+        throw error;
+      }
+      
+      setMessages(data || []);
+    } catch (err: any) {
+      console.error('Error fetching messages:', err);
+      setError(err.message);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Add a new message
+  const addNewMessage = () => {
+    router.push('/add-message');
+  };
+
+  // Handle message starring
+  const toggleStar = async (id: number, currentStarred: boolean) => {
+    try {
+      const { error } = await supabase
+        .from('Message')
+        .update({ starred: !currentStarred })
+        .eq('id', id);
+        
+      if (error) throw error;
+      
+      // Update local state
+      setMessages(messages.map(msg => 
+        msg.id === id ? { ...msg, starred: !currentStarred } : msg
+      ));
+    } catch (err: any) {
+      console.error('Error updating star status:', err);
+      setError(err.message);
+    }
+  };
+
+  // Delete a message
+  const deleteMessage = async (id: number) => {
+    if (!confirm('Are you sure you want to delete this message?')) return;
+    
+    try {
+      const { error } = await supabase
+        .from('Message')
+        .delete()
+        .eq('id', id);
+        
+      if (error) throw error;
+      
+      // Update local state
+      setMessages(messages.filter(msg => msg.id !== id));
+    } catch (err: any) {
+      console.error('Error deleting message:', err);
+      setError(err.message);
+    }
+  };
+
+  // Reset all filters
+  const resetFilters = () => {
+    setSearchTerm('');
+    setSelectedSource('All Sources');
+    setSelectedType('All Types');
+    setSelectedCategory('All Categories');
+    setStarredFilter('All Items');
+  };
+
+  // Apply search and filters
+  const applySearch = () => {
+    fetchMessages();
+  };
+
   return (
     <main className="min-h-screen flex flex-col">
       <header className="bg-gradient-to-r from-indigo-600 via-purple-600 to-violet-600 text-white py-8 relative overflow-hidden">
@@ -183,6 +303,12 @@ export default function Home() {
             
             <div className="mt-8">
               <h2 className="text-xl font-semibold mb-4 gradient-text">Your Messages</h2>
+              
+              {error && (
+                <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
+                  Error: {error}
+                </div>
+              )}
               
               {isLoading ? (
                 <div className="text-center py-12">
