@@ -9,6 +9,10 @@ export default function WebhookSetup() {
   const [telegramBotUsername, setTelegramBotUsername] = useState('');
   const [whatsappNumber, setWhatsappNumber] = useState('');
   const [whatsappCode, setWhatsappCode] = useState('');
+  const [isTestingTelegram, setIsTestingTelegram] = useState(false);
+  const [isTestingWhatsapp, setIsTestingWhatsapp] = useState(false);
+  const [telegramTestResult, setTelegramTestResult] = useState<any>(null);
+  const [whatsappTestResult, setWhatsappTestResult] = useState<any>(null);
   const [baseUrl, setBaseUrl] = useState('');
 
   useEffect(() => {
@@ -54,6 +58,44 @@ export default function WebhookSetup() {
     }
   };
 
+  // Test Telegram webhook
+  const testTelegramWebhook = async () => {
+    setIsTestingTelegram(true);
+    setTelegramTestResult(null);
+    
+    try {
+      const response = await fetch(`/api/test-webhook?source=telegram`);
+      const data = await response.json();
+      setTelegramTestResult(data);
+    } catch (error) {
+      setTelegramTestResult({
+        success: false,
+        message: `Error: ${(error as Error).message}`
+      });
+    } finally {
+      setIsTestingTelegram(false);
+    }
+  };
+  
+  // Test WhatsApp webhook
+  const testWhatsappWebhook = async () => {
+    setIsTestingWhatsapp(true);
+    setWhatsappTestResult(null);
+    
+    try {
+      const response = await fetch(`/api/test-webhook?source=whatsapp`);
+      const data = await response.json();
+      setWhatsappTestResult(data);
+    } catch (error) {
+      setWhatsappTestResult({
+        success: false,
+        message: `Error: ${(error as Error).message}`
+      });
+    } finally {
+      setIsTestingWhatsapp(false);
+    }
+  };
+
   return (
     <div className="glass-card p-6 mb-6">
       <h2 className="text-xl font-semibold gradient-text mb-4">Webhook Setup</h2>
@@ -76,26 +118,52 @@ export default function WebhookSetup() {
                 </code>
               </div>
               
-              <button
-                onClick={setupTelegramWebhook}
-                disabled={isSettingWebhook}
-                className="btn btn-primary w-full"
-              >
-                {isSettingWebhook ? (
-                  <>
-                    <span className="animate-spin inline-block h-4 w-4 mr-2 border-t-2 border-b-2 border-white rounded-full"></span>
-                    Setting up webhook...
-                  </>
-                ) : (
-                  'Set up Telegram Webhook'
-                )}
-              </button>
+              <div className="flex space-x-2 mb-4">
+                <button
+                  onClick={setupTelegramWebhook}
+                  disabled={isSettingWebhook}
+                  className="btn btn-primary flex-1"
+                >
+                  {isSettingWebhook ? (
+                    <>
+                      <span className="animate-spin inline-block h-4 w-4 mr-2 border-t-2 border-b-2 border-white rounded-full"></span>
+                      Setting up webhook...
+                    </>
+                  ) : (
+                    'Set up Telegram Webhook'
+                  )}
+                </button>
+                
+                <button
+                  onClick={testTelegramWebhook}
+                  disabled={isTestingTelegram}
+                  className="btn btn-secondary flex-1"
+                >
+                  {isTestingTelegram ? (
+                    <>
+                      <span className="animate-spin inline-block h-4 w-4 mr-2 border-t-2 border-b-2 border-white rounded-full"></span>
+                      Testing...
+                    </>
+                  ) : (
+                    'Test Webhook'
+                  )}
+                </button>
+              </div>
               
               {webhookSetupResult && (
                 <div className={`mt-4 p-3 rounded-md ${
                   webhookSetupResult.success ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
                 }`}>
                   {webhookSetupResult.message}
+                </div>
+              )}
+              
+              {telegramTestResult && (
+                <div className="mt-4 p-3 rounded-md bg-gray-100">
+                  <h4 className="font-medium mb-2">Webhook Test Results:</h4>
+                  <pre className="text-xs overflow-x-auto">
+                    {JSON.stringify(telegramTestResult, null, 2)}
+                  </pre>
                 </div>
               )}
             </>
@@ -132,6 +200,30 @@ export default function WebhookSetup() {
                   4. Users can join your sandbox with code: <strong>{whatsappCode || 'join <your-sandbox-code>'}</strong>
                 </p>
               </div>
+              
+              <button
+                onClick={testWhatsappWebhook}
+                disabled={isTestingWhatsapp}
+                className="btn btn-primary w-full"
+              >
+                {isTestingWhatsapp ? (
+                  <>
+                    <span className="animate-spin inline-block h-4 w-4 mr-2 border-t-2 border-b-2 border-white rounded-full"></span>
+                    Testing configuration...
+                  </>
+                ) : (
+                  'Test WhatsApp Configuration'
+                )}
+              </button>
+              
+              {whatsappTestResult && (
+                <div className="mt-4 p-3 rounded-md bg-gray-100">
+                  <h4 className="font-medium mb-2">Configuration Test Results:</h4>
+                  <pre className="text-xs overflow-x-auto">
+                    {JSON.stringify(whatsappTestResult, null, 2)}
+                  </pre>
+                </div>
+              )}
             </>
           ) : (
             <p className="text-sm text-red-600">
