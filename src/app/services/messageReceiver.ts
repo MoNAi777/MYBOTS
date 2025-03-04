@@ -92,7 +92,7 @@ export class MessageReceiverService {
   // Process an incoming message
   async processIncomingMessage(
     content: string, 
-    source: 'whatsapp' | 'telegram',
+    source: 'whatsapp' | 'telegram' | 'sms',
     metadata: Record<string, any> = {}
   ): Promise<number> {
     try {
@@ -121,7 +121,7 @@ export class MessageReceiverService {
   // Simulate receiving a message (for testing)
   async simulateReceiveMessage(
     content: string, 
-    source: 'whatsapp' | 'telegram'
+    source: 'whatsapp' | 'telegram' | 'sms'
   ): Promise<number> {
     return this.processIncomingMessage(content, source);
   }

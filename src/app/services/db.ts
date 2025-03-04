@@ -1,7 +1,7 @@
 export interface Message {
   id?: number;
   content: string;
-  source: 'whatsapp' | 'telegram';
+  source: 'whatsapp' | 'telegram' | 'sms';
   type: 'text' | 'link' | 'video' | 'image' | 'file' | 'app' | 'other';
   category?: string;
   tags?: string[];
@@ -84,7 +84,7 @@ class DatabaseService {
   }
 
   async getMessages(options: {
-    source?: 'whatsapp' | 'telegram';
+    source?: 'whatsapp' | 'telegram' | 'sms';
     type?: 'text' | 'link' | 'video' | 'image' | 'file' | 'app' | 'other';
     category?: string;
     starred?: boolean;
