@@ -7,6 +7,16 @@
 export const telegramConfig = {
   botToken: process.env.TELEGRAM_BOT_TOKEN || process.env.NEXT_PUBLIC_TELEGRAM_BOT_TOKEN || '',
   botUsername: process.env.TELEGRAM_BOT_USERNAME || process.env.NEXT_PUBLIC_TELEGRAM_BOT_USERNAME || '',
+  
+  // Debug info
+  debug: {
+    tokenSource: process.env.TELEGRAM_BOT_TOKEN ? 'TELEGRAM_BOT_TOKEN' : 
+                 process.env.NEXT_PUBLIC_TELEGRAM_BOT_TOKEN ? 'NEXT_PUBLIC_TELEGRAM_BOT_TOKEN' : 'None',
+    usernameSource: process.env.TELEGRAM_BOT_USERNAME ? 'TELEGRAM_BOT_USERNAME' : 
+                    process.env.NEXT_PUBLIC_TELEGRAM_BOT_USERNAME ? 'NEXT_PUBLIC_TELEGRAM_BOT_USERNAME' : 'None',
+    tokenLength: process.env.TELEGRAM_BOT_TOKEN?.length || 
+                 process.env.NEXT_PUBLIC_TELEGRAM_BOT_TOKEN?.length || 0,
+  }
 };
 
 // Helper function to validate that all required credentials are available

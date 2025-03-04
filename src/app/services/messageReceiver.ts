@@ -50,7 +50,19 @@ export class MessageReceiverService {
   // Set up the Telegram webhook
   async setupTelegramWebhook(baseUrl: string): Promise<boolean> {
     try {
+      // First, check if the token is valid
+      const checkResponse = await fetch(`https://api.telegram.org/bot${telegramConfig.botToken}/getMe`);
+      const checkData = await checkResponse.json();
+      
+      if (!checkData.ok) {
+        console.error('Invalid Telegram bot token:', checkData);
+        throw new Error(`Invalid Telegram bot token: ${checkData.description || 'Unknown error'}`);
+      }
+      
+      // Token is valid, set up the webhook
       const webhookUrl = `${baseUrl}/api/receive?source=telegram`;
+      console.log('Setting up Telegram webhook with URL:', webhookUrl);
+      
       const response = await fetch(`https://api.telegram.org/bot${telegramConfig.botToken}/setWebhook`, {
         method: 'POST',
         headers: {
@@ -63,10 +75,17 @@ export class MessageReceiverService {
       });
       
       const data = await response.json();
+      
+      if (!data.ok) {
+        console.error('Error setting up Telegram webhook:', data);
+        throw new Error(`Failed to set webhook: ${data.description || 'Unknown error'}`);
+      }
+      
+      console.log('Telegram webhook set up successfully:', data);
       return data.ok === true;
     } catch (error) {
       console.error('Error setting up Telegram webhook:', error);
-      return false;
+      throw error;
     }
   }
   

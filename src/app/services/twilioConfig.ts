@@ -10,6 +10,15 @@ export const twilioConfig = {
   phoneNumber: process.env.TWILIO_PHONE_NUMBER || '',
   whatsappNumber: process.env.TWILIO_WHATSAPP_NUMBER || '',
   whatsappSandboxCode: process.env.TWILIO_WHATSAPP_SANDBOX_CODE || '',
+  
+  // Debug info
+  debug: {
+    accountSidLength: process.env.TWILIO_ACCOUNT_SID?.length || 0,
+    authTokenLength: process.env.TWILIO_AUTH_TOKEN?.length || 0,
+    phoneNumberSet: !!process.env.TWILIO_PHONE_NUMBER,
+    whatsappNumberSet: !!process.env.TWILIO_WHATSAPP_NUMBER,
+    whatsappSandboxCodeSet: !!process.env.TWILIO_WHATSAPP_SANDBOX_CODE,
+  }
 };
 
 // Helper function to validate that all required credentials are available
