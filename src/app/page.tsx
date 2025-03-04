@@ -214,6 +214,7 @@ export default function Home() {
               <line x1="12" y1="22.08" x2="12" y2="12"></line>
             </svg>
             Data Organizer
+            <span className="ml-3 text-sm bg-white/20 px-2 py-1 rounded-full text-white font-normal">v0.1</span>
           </h1>
           <p className="text-indigo-100 text-lg max-w-2xl">Organize and search through your WhatsApp and Telegram messages</p>
         </div>
@@ -223,10 +224,10 @@ export default function Home() {
         <div className="mb-6">
           <div className="flex border-b border-gray-200 overflow-x-auto scrollbar-hide">
             <button
-              className={`py-3 px-5 font-medium text-sm transition-colors flex items-center ${
+              className={`nav-tab flex items-center ${
                 activeTab === 'messages'
-                  ? 'text-indigo-600 border-b-2 border-indigo-600'
-                  : 'text-gray-600 hover:text-gray-900'
+                  ? 'nav-tab-active'
+                  : 'nav-tab-inactive'
               }`}
               onClick={() => setActiveTab('messages')}
             >
@@ -236,10 +237,10 @@ export default function Home() {
               Messages
             </button>
             <button
-              className={`py-3 px-5 font-medium text-sm transition-colors flex items-center ${
+              className={`nav-tab flex items-center ${
                 activeTab === 'stats'
-                  ? 'text-indigo-600 border-b-2 border-indigo-600'
-                  : 'text-gray-600 hover:text-gray-900'
+                  ? 'nav-tab-active'
+                  : 'nav-tab-inactive'
               }`}
               onClick={() => setActiveTab('stats')}
             >
@@ -251,10 +252,10 @@ export default function Home() {
               Statistics
             </button>
             <button
-              className={`py-3 px-5 font-medium text-sm transition-colors flex items-center ${
+              className={`nav-tab flex items-center ${
                 activeTab === 'setup'
-                  ? 'text-indigo-600 border-b-2 border-indigo-600'
-                  : 'text-gray-600 hover:text-gray-900'
+                  ? 'nav-tab-active'
+                  : 'nav-tab-inactive'
               }`}
               onClick={() => setActiveTab('setup')}
             >
@@ -270,12 +271,13 @@ export default function Home() {
         {activeTab === 'messages' ? (
           <>
             {isAddMessageOpen ? (
-              <div className="card p-6 mb-6 shadow-md">
+              <div className="glass-card p-6 mb-6 shadow-md fade-in">
                 <div className="flex justify-between items-center mb-4">
                   <h2 className="text-xl font-semibold gradient-text">Add New Message</h2>
                   <button 
                     onClick={() => setIsAddMessageOpen(false)}
                     className="text-gray-500 hover:text-gray-700 transition-colors p-1 rounded-full hover:bg-gray-100"
+                    aria-label="Close form"
                   >
                     <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                       <line x1="18" y1="6" x2="6" y2="18"></line>
@@ -287,7 +289,7 @@ export default function Home() {
               </div>
             ) : (
               <button
-                className="btn btn-primary w-full mb-6 py-3 group"
+                className="btn btn-primary w-full mb-6 py-3 group slide-up"
                 onClick={() => setIsAddMessageOpen(true)}
               >
                 <svg className="mr-2 group-hover:animate-pulse" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -298,68 +300,112 @@ export default function Home() {
               </button>
             )}
             
-            <div className="card p-6 mb-6 shadow-md">
-              <SearchFilters onSearch={handleSearchResults} onReset={handleSearchReset} />
+            <div className="mb-6 bg-white rounded-xl p-4 shadow-sm border border-gray-100 slide-up">
+              <SearchFilters 
+                searchTerm={searchTerm}
+                setSearchTerm={setSearchTerm}
+                selectedSource={selectedSource}
+                setSelectedSource={setSelectedSource}
+                selectedType={selectedType}
+                setSelectedType={setSelectedType}
+                selectedCategory={selectedCategory}
+                setSelectedCategory={setSelectedCategory}
+                starredFilter={starredFilter}
+                setStarredFilter={setStarredFilter}
+                onSearch={applySearch}
+                onReset={resetFilters}
+              />
             </div>
             
-            <div className="mt-8">
-              <h2 className="text-xl font-semibold mb-4 gradient-text">Your Messages</h2>
-              
-              {error && (
-                <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
-                  Error: {error}
-                </div>
-              )}
-              
-              {isLoading ? (
-                <div className="text-center py-12">
-                  <div className="inline-block animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-indigo-600"></div>
-                  <p className="mt-4 text-gray-600">Loading messages...</p>
-                </div>
-              ) : messages.length === 0 ? (
-                <div className="card p-8 text-center">
-                  <div className="w-20 h-20 bg-gradient-to-br from-indigo-100 to-violet-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-indigo-600">
-                      <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
+            {error && (
+              <div className="bg-red-50 border-l-4 border-red-500 p-4 mb-6 rounded-md">
+                <div className="flex">
+                  <div className="flex-shrink-0">
+                    <svg className="h-5 w-5 text-red-500" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+                      <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
                     </svg>
                   </div>
-                  <p className="text-gray-700 text-xl mb-2 font-medium">No messages found</p>
-                  <p className="text-gray-500 max-w-md mx-auto">
-                    Add a new message or check the Setup tab to learn how to forward messages from WhatsApp and Telegram
-                  </p>
+                  <div className="ml-3">
+                    <p className="text-sm text-red-700">{error}</p>
+                  </div>
                 </div>
-              ) : (
-                <div className="space-y-4">
-                  {messages.map((message) => (
+              </div>
+            )}
+            
+            {isLoading ? (
+              <div className="flex justify-center items-center py-12">
+                <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-indigo-500"></div>
+              </div>
+            ) : messages.length === 0 ? (
+              <div className="text-center py-12 bg-gray-50 rounded-xl border border-gray-200">
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-16 w-16 mx-auto text-gray-400 mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4" />
+                </svg>
+                <h3 className="text-lg font-medium text-gray-900 mb-2">No messages found</h3>
+                <p className="text-gray-500 mb-6">Try adjusting your search filters or add a new message.</p>
+                <button
+                  onClick={() => setIsAddMessageOpen(true)}
+                  className="btn btn-primary"
+                >
+                  Add Your First Message
+                </button>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
+                {messages.map((message) => (
+                  <div key={message.id} className="card-hover fade-in">
                     <MessageCard
-                      key={message.id}
                       message={message}
-                      onUpdate={loadMessages}
+                      onUpdate={fetchMessages}
                     />
-                  ))}
-                </div>
-              )}
-            </div>
+                  </div>
+                ))}
+              </div>
+            )}
+            
+            {isSyncing && (
+              <div className="fixed bottom-4 right-4 bg-indigo-600 text-white px-4 py-2 rounded-lg shadow-lg flex items-center">
+                <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
+                Syncing with Supabase...
+              </div>
+            )}
           </>
         ) : activeTab === 'stats' ? (
-          <MessageStats />
+          <div className="glass-card p-6 fade-in">
+            <MessageStats />
+          </div>
         ) : (
-          <>
-            <IntegrationGuide whatsappLink={whatsappLink} telegramLink={telegramLink} />
-            <div className="mt-8">
-              <WebhookMessages />
-            </div>
-          </>
+          <div className="glass-card p-6 fade-in">
+            <IntegrationGuide
+              whatsappLink={whatsappLink}
+              telegramLink={telegramLink}
+              onSync={handleSync}
+            />
+          </div>
         )}
       </div>
       
-      <footer className="bg-gradient-to-r from-indigo-600 via-purple-600 to-violet-600 text-white mt-auto py-6 relative overflow-hidden">
-        <div className="absolute inset-0 opacity-20">
-          <div className="absolute bottom-0 left-0 w-full h-full bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiB2aWV3Qm94PSIwIDAgMTI4MCAxNDAiIHByZXNlcnZlQXNwZWN0UmF0aW89Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PGcgZmlsbD0iI2ZmZmZmZiI+PHBhdGggZD0iTTAgNDcuNDRMMTcwIDBsNjI2LjQ4IDk0LjA5TDExMTAgODcuMTFsMTcwLTM5LjY3VjE0MEgweiIgZmlsbC1vcGFjaXR5PSIuNSIvPjxwYXRoIGQ9Ik0wIDkwLjcybDE0MC0yOC4yOCAzMTUuNTIgMjQuMTRMNzk2LjQ4IDY1LjggMTE0MCAxMDQuODlsMTQwLTE0LjE3VjE0MEgweiIvPjwvZz48L3N2Zz4=')]"></div>
-        </div>
-        <div className="container mx-auto px-4 text-center relative z-10">
-          <p className="text-lg font-medium">Data Organizer - A PWA for organizing your messages</p>
-          <p className="mt-1 text-indigo-100">All data is stored locally on your device</p>
+      <footer className="bg-gray-50 border-t border-gray-200 py-6 mt-auto">
+        <div className="container mx-auto px-4">
+          <div className="flex flex-col md:flex-row justify-between items-center">
+            <p className="text-gray-600 text-sm mb-4 md:mb-0">
+              &copy; {new Date().getFullYear()} Data Organizer. All rights reserved.
+            </p>
+            <div className="flex space-x-4">
+              <a href="#" className="text-gray-500 hover:text-indigo-600 transition-colors">
+                Privacy Policy
+              </a>
+              <a href="#" className="text-gray-500 hover:text-indigo-600 transition-colors">
+                Terms of Service
+              </a>
+              <a href="#" className="text-gray-500 hover:text-indigo-600 transition-colors">
+                Contact
+              </a>
+            </div>
+          </div>
         </div>
       </footer>
     </main>

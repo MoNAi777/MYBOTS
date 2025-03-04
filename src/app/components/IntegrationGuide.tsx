@@ -7,9 +7,10 @@ import telegramConfig from '../services/telegramConfig';
 interface IntegrationGuideProps {
   whatsappLink: string;
   telegramLink: string;
+  onSync?: () => Promise<void>;
 }
 
-export default function IntegrationGuide({ whatsappLink, telegramLink }: IntegrationGuideProps) {
+export default function IntegrationGuide({ whatsappLink, telegramLink, onSync }: IntegrationGuideProps) {
   const [activeTab, setActiveTab] = useState<'whatsapp' | 'telegram'>('whatsapp');
   const [showLLMInfo, setShowLLMInfo] = useState(false);
   const [whatsappNumber, setWhatsappNumber] = useState('');

@@ -1,16 +1,40 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, Dispatch, SetStateAction } from 'react';
 import dbService from '../services/db';
 import aiService from '../services/ai';
 import { Message } from '../services/db';
 
 interface SearchFiltersProps {
+  searchTerm?: string;
+  setSearchTerm?: Dispatch<SetStateAction<string>>;
+  selectedSource?: string;
+  setSelectedSource?: Dispatch<SetStateAction<string>>;
+  selectedType?: string;
+  setSelectedType?: Dispatch<SetStateAction<string>>;
+  selectedCategory?: string;
+  setSelectedCategory?: Dispatch<SetStateAction<string>>;
+  starredFilter?: string;
+  setStarredFilter?: Dispatch<SetStateAction<string>>;
   onSearch: (results: Message[]) => void;
   onReset: () => void;
 }
 
-export default function SearchFilters({ onSearch, onReset }: SearchFiltersProps) {
+export default function SearchFilters({ 
+  searchTerm, 
+  setSearchTerm,
+  selectedSource,
+  setSelectedSource,
+  selectedType,
+  setSelectedType,
+  selectedCategory,
+  setSelectedCategory,
+  starredFilter,
+  setStarredFilter,
+  onSearch, 
+  onReset 
+}: SearchFiltersProps) {
+  // Use local state if parent state is not provided
   const [query, setQuery] = useState('');
   const [source, setSource] = useState<'all' | 'whatsapp' | 'telegram'>('all');
   const [type, setType] = useState<'all' | 'text' | 'link' | 'video' | 'image' | 'file' | 'app' | 'other'>('all');

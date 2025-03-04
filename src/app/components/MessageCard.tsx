@@ -178,50 +178,57 @@ export default function MessageCard({ message, onUpdate }: MessageCardProps) {
   };
   
   return (
-    <div className="card overflow-hidden hover:shadow-lg transition-all duration-300">
-      <div className="p-5">
+    <div className="card overflow-hidden transition-all duration-300">
+      <div className="p-4">
         <div className="flex justify-between items-start mb-3">
-          <div className="flex items-center space-x-2 flex-wrap gap-2">
-            <div className="p-2 rounded-full bg-gradient-to-br from-indigo-50 to-violet-50">
-              {getTypeIcon()}
-            </div>
+          <div className="flex items-center">
             {getSourceIcon()}
-            {message.category && (
-              <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gradient-to-r from-indigo-50 to-violet-50 text-indigo-800">
-                {message.category}
-              </span>
-            )}
+            <span className="text-sm font-medium text-gray-700 ml-2">{message.source}</span>
+            <span className="ml-2 px-2 py-0.5 text-xs rounded-full bg-gray-100 text-gray-600">
+              {message.type}
+            </span>
           </div>
-          
-          <div className="flex items-center space-x-2">
+          <div className="flex space-x-1">
             <button
               onClick={handleToggleStar}
-              className={`p-1.5 rounded-full focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-all ${
-                message.starred ? 'text-yellow-500 hover:text-yellow-600 hover:bg-yellow-50' : 'text-gray-400 hover:text-gray-500 hover:bg-gray-50'
+              className={`p-1.5 rounded-full transition-colors ${
+                editedStarred ? 'text-yellow-500 hover:text-yellow-600' : 'text-gray-400 hover:text-gray-500'
               }`}
-              title={message.starred ? 'Unstar' : 'Star'}
+              aria-label={editedStarred ? "Unstar message" : "Star message"}
             >
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 24 24" fill={message.starred ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 24 24" fill={editedStarred ? "currentColor" : "none"} stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon>
               </svg>
             </button>
-            
+            {!isEditing ? (
+              <button
+                onClick={() => setIsEditing(true)}
+                className="p-1.5 rounded-full text-gray-400 hover:text-gray-500 transition-colors"
+                aria-label="Edit message"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
+                  <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
+                </svg>
+              </button>
+            ) : (
+              <button
+                onClick={handleSave}
+                className="p-1.5 rounded-full text-green-500 hover:text-green-600 transition-colors"
+                aria-label="Save changes"
+                disabled={isUpdating}
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path>
+                  <polyline points="17 21 17 13 7 13 7 21"></polyline>
+                  <polyline points="7 3 7 8 15 8"></polyline>
+                </svg>
+              </button>
+            )}
             <button
-              onClick={() => setIsEditing(!isEditing)}
-              className="p-1.5 rounded-full text-gray-400 hover:text-indigo-500 hover:bg-indigo-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-all"
-              title="Edit"
-            >
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
-                <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
-              </svg>
-            </button>
-            
-            <button
-              onClick={handleDelete}
-              className="p-1.5 rounded-full text-gray-400 hover:text-red-500 hover:bg-red-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 transition-all"
-              title="Delete"
-              disabled={isDeleting}
+              onClick={() => setIsDeleting(true)}
+              className="p-1.5 rounded-full text-gray-400 hover:text-red-500 transition-colors"
+              aria-label="Delete message"
             >
               <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <polyline points="3 6 5 6 21 6"></polyline>
@@ -233,105 +240,107 @@ export default function MessageCard({ message, onUpdate }: MessageCardProps) {
           </div>
         </div>
         
-        <div className="mt-4">
-          <p className="text-gray-800 whitespace-pre-wrap break-words leading-relaxed">{message.content}</p>
+        <div className="mb-3">
+          <div className="text-gray-800 break-words">
+            {message.content}
+          </div>
+          {message.type === 'link' && message.content && (
+            <a 
+              href={message.content} 
+              target="_blank" 
+              rel="noopener noreferrer" 
+              className="mt-2 inline-flex items-center text-sm text-indigo-600 hover:text-indigo-700 transition-colors"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path>
+                <polyline points="15 3 21 3 21 9"></polyline>
+                <line x1="10" y1="14" x2="21" y2="3"></line>
+              </svg>
+              {message.content.length > 40 ? message.content.substring(0, 40) + '...' : message.content}
+            </a>
+          )}
         </div>
         
-        {message.tags && message.tags.length > 0 && (
-          <div className="mt-4 flex flex-wrap gap-1.5">
-            {message.tags.map((tag, index) => (
-              <span key={index} className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gradient-to-r from-indigo-100 to-violet-100 text-indigo-800 hover:from-indigo-200 hover:to-violet-200 transition-colors">
-                #{tag}
-              </span>
-            ))}
-          </div>
-        )}
+        <div className="mt-4 flex flex-wrap gap-2">
+          {isEditing ? (
+            <>
+              <div className="w-full mb-3">
+                <label htmlFor="category" className="block text-sm font-medium text-gray-700 mb-1">Category</label>
+                <select
+                  id="category"
+                  value={editedCategory}
+                  onChange={(e) => setEditedCategory(e.target.value)}
+                  className="select w-full"
+                >
+                  <option value="">Select a category</option>
+                  {categories.map((cat) => (
+                    <option key={cat} value={cat}>{cat}</option>
+                  ))}
+                </select>
+              </div>
+              <div className="w-full">
+                <label htmlFor="tags" className="block text-sm font-medium text-gray-700 mb-1">Tags (comma separated)</label>
+                <input
+                  id="tags"
+                  type="text"
+                  value={editedTags}
+                  onChange={(e) => setEditedTags(e.target.value)}
+                  placeholder="e.g. important, follow-up, idea"
+                  className="input w-full"
+                />
+              </div>
+            </>
+          ) : (
+            <>
+              {message.category && (
+                <span className="px-2.5 py-1 rounded-full text-xs font-medium bg-indigo-50 text-indigo-700">
+                  {message.category}
+                </span>
+              )}
+              {message.tags && message.tags.map((tag, index) => (
+                <span key={index} className="px-2.5 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-700">
+                  {tag}
+                </span>
+              ))}
+            </>
+          )}
+        </div>
         
-        <div className="mt-4 text-xs text-gray-500 flex items-center">
-          <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <circle cx="12" cy="12" r="10"></circle>
-            <polyline points="12 6 12 12 16 14"></polyline>
-          </svg>
-          {formatDate(message.createdAt)}
+        <div className="mt-4 pt-3 border-t border-gray-100 flex justify-between items-center text-xs text-gray-500">
+          <div>
+            {formatDate(message.createdAt)}
+          </div>
+          {message.id && (
+            <div>
+              ID: {message.id}
+            </div>
+          )}
         </div>
       </div>
       
-      {isEditing && (
-        <div className="border-t border-gray-200 p-5 bg-gradient-to-br from-gray-50 to-indigo-50/30">
-          <h4 className="text-sm font-medium text-gray-700 mb-4">Edit Message</h4>
-          
-          <div className="space-y-4">
-            <div>
-              <label htmlFor={`category-${message.id}`} className="block text-xs font-medium text-gray-700 mb-1">
-                Category
-              </label>
-              <select
-                id={`category-${message.id}`}
-                value={editedCategory}
-                onChange={(e) => setEditedCategory(e.target.value)}
-                className="select w-full"
-              >
-                <option value="">Select a category</option>
-                {categories.map((category) => (
-                  <option key={category} value={category}>
-                    {category}
-                  </option>
-                ))}
-              </select>
-            </div>
-            
-            <div>
-              <label htmlFor={`tags-${message.id}`} className="block text-xs font-medium text-gray-700 mb-1">
-                Tags (comma separated)
-              </label>
-              <input
-                type="text"
-                id={`tags-${message.id}`}
-                value={editedTags}
-                onChange={(e) => setEditedTags(e.target.value)}
-                placeholder="tag1, tag2, tag3"
-                className="input"
-              />
-            </div>
-            
-            <div className="flex items-center">
-              <input
-                type="checkbox"
-                id={`starred-${message.id}`}
-                checked={editedStarred}
-                onChange={(e) => setEditedStarred(e.target.checked)}
-                className="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded"
-              />
-              <label htmlFor={`starred-${message.id}`} className="ml-2 block text-sm text-gray-700">
-                Starred
-              </label>
-            </div>
-            
-            <div className="flex justify-end space-x-3 pt-2">
-              <button
-                type="button"
-                onClick={() => setIsEditing(false)}
-                className="btn btn-secondary"
-              >
-                Cancel
-              </button>
-              <button
-                type="button"
-                onClick={handleSave}
-                className="btn btn-primary"
-                disabled={isUpdating}
-              >
-                {isUpdating ? (
-                  <div className="flex items-center">
-                    <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                    </svg>
-                    Saving...
-                  </div>
-                ) : 'Save'}
-              </button>
-            </div>
+      {isDeleting && (
+        <div className="absolute inset-0 bg-white/95 backdrop-blur-sm flex flex-col items-center justify-center p-6 z-10 fade-in">
+          <p className="text-gray-800 font-medium mb-4 text-center">Are you sure you want to delete this message?</p>
+          <div className="flex space-x-3">
+            <button
+              onClick={() => setIsDeleting(false)}
+              className="btn btn-secondary"
+              disabled={isUpdating}
+            >
+              Cancel
+            </button>
+            <button
+              onClick={handleDelete}
+              className="btn bg-red-500 text-white hover:bg-red-600 focus:ring-red-500"
+              disabled={isUpdating}
+            >
+              {isUpdating ? (
+                <svg className="animate-spin h-5 w-5 mr-2" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
+              ) : 'Delete'}
+            </button>
           </div>
         </div>
       )}
