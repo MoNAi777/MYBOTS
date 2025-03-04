@@ -9,11 +9,17 @@ const messageReceiver = new MessageReceiverService();
 const supabase = createClient(supabaseConfig.url, supabaseConfig.anonKey);
 
 export async function POST(request: NextRequest) {
-  console.log('WhatsApp webhook received');
+  console.log('WhatsApp webhook received - START');
   
   try {
+    // Log the raw request
+    const clone1 = request.clone();
+    const rawBody = await clone1.text();
+    console.log('WhatsApp webhook raw request:', rawBody);
+    
     // Parse the incoming request body
-    const formData = await request.formData();
+    const clone2 = request.clone();
+    const formData = await clone2.formData();
     
     // Log the received data for debugging
     console.log('WhatsApp webhook data:', Object.fromEntries(formData.entries()));
@@ -21,6 +27,8 @@ export async function POST(request: NextRequest) {
     // Extract the message content from Twilio's format
     const messageBody = formData.get('Body')?.toString() || '';
     const from = formData.get('From')?.toString() || '';
+    
+    console.log('WhatsApp message content:', { messageBody, from });
     
     if (!messageBody) {
       console.error('No message body found in WhatsApp webhook');
